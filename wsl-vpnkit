@@ -1,0 +1,20 @@
+#! /bin/bash
+
+BASE_PATH=$(dirname $(realpath $0 ))
+
+$BASE_PATH/wsl-vpnkit-relay &
+
+sleep 3
+
+cp -f $BASE_PATH/wsl-vpnkit.ps1 /mnt/c/bin/
+/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe C:/bin/wsl-vpnkit.ps1 &
+
+sleep 3
+
+vpnkit-tap-vsockd --tap eth1 --path /var/run/wsl-vpnkit.sock &
+
+sleep 3
+
+$BASE_PATH/wsl-ip-config &
+
+wait

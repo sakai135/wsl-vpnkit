@@ -1,0 +1,3 @@
+#! /bin/bash
+
+exec socat UNIX-LISTEN:/var/run/wsl-vpnkit.sock,fork,group=netdev,umask=007 EXEC:"npiperelay.exe -ep -s //./pipe/wsl-vpnkit",nofork
