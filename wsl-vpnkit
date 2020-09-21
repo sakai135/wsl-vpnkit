@@ -2,19 +2,44 @@
 
 BASE_PATH=$(dirname $(realpath $0 ))
 
-$BASE_PATH/wsl-vpnkit-relay &
+SOCKET_PATH=/var/run/wsl-vpnkit.sock
+PIPE_PATH="\\\\.\\pipe\\wsl-vpnkit"
 
+VPNKIT_PATH="C:/Program Files/Docker/Docker/resources/vpnkit.exe"
+VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
+VPNKIT_GATEWAY_FORWARD_CONFIG="\$env:APPDATA/Docker/gateway_forwards.json"
+VPNKIT_GATEWAY_IP="192.168.67.1"
+VPNKIT_HOST_IP="192.168.67.2"
+VPNKIT_LOWEST_IP="192.168.67.3"
+VPNKIT_HIGHEST_IP="192.168.67.14"
+
+TAP_NAME=eth1
+
+relay () {
+    exec socat UNIX-LISTEN:$SOCKET_PATH,fork,group=netdev,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
+}
+
+vpnkit () {
+    /mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe -Command "& '$VPNKIT_PATH' --ethernet $PIPE_PATH --http \"$VPNKIT_HTTP_CONFIG\" --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\" --listen-backlog 32 --gateway-ip $VPNKIT_GATEWAY_IP --host-ip $VPNKIT_HOST_IP --lowest-ip $VPNKIT_LOWEST_IP --highest-ip $VPNKIT_HIGHEST_IP"
+}
+
+tap () {
+    vpnkit-tap-vsockd --tap $TAP_NAME --path $SOCKET_PATH
+}
+
+ipconfig () {
+    ifconfig $TAP_NAME up
+    ifconfig $TAP_NAME $VPNKIT_LOWEST_IP
+    ifconfig $TAP_NAME netmask 255.255.255.0
+    ip route del $(ip route | grep default)
+    ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
+}
+
+relay &
 sleep 3
-
-cp -f $BASE_PATH/wsl-vpnkit.ps1 /mnt/c/bin/
-/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe C:/bin/wsl-vpnkit.ps1 &
-
+vpnkit &
 sleep 3
-
-vpnkit-tap-vsockd --tap eth1 --path /var/run/wsl-vpnkit.sock &
-
+tap &
 sleep 3
-
-$BASE_PATH/wsl-ip-config &
-
+ipconfig
 wait

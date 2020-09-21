@@ -1,8 +1,0 @@
-#! /bin/bash
-
-ifconfig eth1 up
-ifconfig eth1 192.168.67.3
-ifconfig eth1 netmask 255.255.255.0
-ip route del $(ip route | grep default)
-ip route add default via 192.168.67.1 dev eth1
-# echo "nameserver 192.168.67.1" >> /etc/resolv.conf

@@ -98,6 +98,8 @@ Keep this terminal open.
 wsl.exe --shutdown
 ```
 
+Check for a `vpnkit.exe` process listening on `\\.\pipe\wsl-vpnkit` and kill that too.
+
 ### Check for the required processes
 
 ```sh
@@ -105,5 +107,5 @@ ps aux | grep wsl-vpnkit
 ```
 
 * `socat ... npiperelay.exe`
-* `wsl-vpnkit.ps1`
+* `vpnkit.exe`
 * `vpnkit-tap-vsockd`
