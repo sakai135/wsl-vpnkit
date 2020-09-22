@@ -5,6 +5,8 @@ BASE_PATH=$(dirname $(realpath $0 ))
 SOCKET_PATH=/var/run/wsl-vpnkit.sock
 PIPE_PATH="\\\\.\\pipe\\wsl-vpnkit"
 
+POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe"
+
 VPNKIT_PATH="C:/Program Files/Docker/Docker/resources/vpnkit.exe"
 VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
 VPNKIT_GATEWAY_FORWARD_CONFIG="\$env:APPDATA/Docker/gateway_forwards.json"
@@ -15,12 +17,39 @@ VPNKIT_HIGHEST_IP="192.168.67.14"
 
 TAP_NAME=eth1
 
+PID_RELAY=
+PID_VPNKIT=
+PID_TAP=
+
 relay () {
-    exec socat UNIX-LISTEN:$SOCKET_PATH,fork,group=netdev,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
+    socat UNIX-LISTEN:$SOCKET_PATH,fork,group=netdev,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
 }
 
 vpnkit () {
-    /mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe -Command "& '$VPNKIT_PATH' --ethernet $PIPE_PATH --http \"$VPNKIT_HTTP_CONFIG\" --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\" --listen-backlog 32 --gateway-ip $VPNKIT_GATEWAY_IP --host-ip $VPNKIT_HOST_IP --lowest-ip $VPNKIT_LOWEST_IP --highest-ip $VPNKIT_HIGHEST_IP"
+    $POWERSHELL_PATH -Command "\
+        Start-Process \
+            -FilePath \"$VPNKIT_PATH\" \
+            -ArgumentList \" \
+                --ethernet $PIPE_PATH \
+                --http \"\"$VPNKIT_HTTP_CONFIG\"\" \
+                --gateway-forwards \"\"$VPNKIT_GATEWAY_FORWARD_CONFIG\"\" \
+                --listen-backlog 32 \
+                --gateway-ip $VPNKIT_GATEWAY_IP \
+                --host-ip $VPNKIT_HOST_IP \
+                --lowest-ip $VPNKIT_LOWEST_IP \
+                --highest-ip $VPNKIT_HIGHEST_IP \
+            \" \
+            -NoNewWindow \
+    "
+}
+
+vpnkit_pid () {
+    $POWERSHELL_PATH -Command "( \
+        Get-Process | \
+        Where-Object { \$_.Path -eq \"${VPNKIT_PATH//\//\\}\" } | \
+        Sort-Object -Property StartTime -Descending | \
+        Select-Object -First 1 \
+    ).Id"
 }
 
 tap () {
@@ -35,11 +64,20 @@ ipconfig () {
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
 }
 
+close () {
+    kill $PID_RELAY $PID_TAP
+    `$POWERSHELL_PATH -Command "Stop-Process -Id $PID_VPNKIT"`
+}
+
 relay &
+PID_RELAY=$!
 sleep 3
 vpnkit &
+PID_VPNKIT=$(vpnkit_pid)
 sleep 3
 tap &
+PID_TAP=$!
 sleep 3
 ipconfig
+trap close exit
 wait
