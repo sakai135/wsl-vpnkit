@@ -1,15 +1,13 @@
 #! /bin/bash
 
-BASE_PATH=$(dirname $(realpath $0 ))
-
 SOCKET_PATH=/var/run/wsl-vpnkit.sock
 PIPE_PATH="\\\\.\\pipe\\wsl-vpnkit"
 
 POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe"
 
 VPNKIT_PATH="C:/Program Files/Docker/Docker/resources/vpnkit.exe"
-VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
-VPNKIT_GATEWAY_FORWARD_CONFIG="\$env:APPDATA/Docker/gateway_forwards.json"
+# VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
+# VPNKIT_GATEWAY_FORWARD_CONFIG="\$env:APPDATA/Docker/gateway_forwards.json"
 VPNKIT_GATEWAY_IP="192.168.67.1"
 VPNKIT_HOST_IP="192.168.67.2"
 VPNKIT_LOWEST_IP="192.168.67.3"
@@ -26,21 +24,21 @@ relay () {
 }
 
 vpnkit () {
-    $POWERSHELL_PATH -Command "\
-        Start-Process \
-            -FilePath \"$VPNKIT_PATH\" \
-            -ArgumentList \" \
-                --ethernet $PIPE_PATH \
-                --http \"\"$VPNKIT_HTTP_CONFIG\"\" \
-                --gateway-forwards \"\"$VPNKIT_GATEWAY_FORWARD_CONFIG\"\" \
-                --listen-backlog 32 \
-                --gateway-ip $VPNKIT_GATEWAY_IP \
-                --host-ip $VPNKIT_HOST_IP \
-                --lowest-ip $VPNKIT_LOWEST_IP \
-                --highest-ip $VPNKIT_HIGHEST_IP \
-            \" \
-            -NoNewWindow \
+    PSCMD="& \"$VPNKIT_PATH\" \
+        --ethernet $PIPE_PATH \
+        --listen-backlog 32 \
+        --gateway-ip $VPNKIT_GATEWAY_IP \
+        --host-ip $VPNKIT_HOST_IP \
+        --lowest-ip $VPNKIT_LOWEST_IP \
+        --highest-ip $VPNKIT_HIGHEST_IP \
     "
+    if [ "$VPNKIT_HTTP_CONFIG" ]; then
+        PSCMD="$PSCMD --http \"$VPNKIT_HTTP_CONFIG\""
+    fi
+    if [ "$VPNKIT_GATEWAY_FORWARD_CONFIG" ]; then
+        PSCMD="$PSCMD --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\""
+    fi
+    $POWERSHELL_PATH -Command "$PSCMD"
 }
 
 vpnkit_pid () {
@@ -66,7 +64,7 @@ ipconfig () {
 
 close () {
     kill $PID_RELAY $PID_TAP
-    `$POWERSHELL_PATH -Command "Stop-Process -Id $PID_VPNKIT"`
+    $POWERSHELL_PATH -Command "Stop-Process -Id $PID_VPNKIT"
 }
 
 relay &
