@@ -38,11 +38,11 @@ vpnkit () {
     if [ "$VPNKIT_GATEWAY_FORWARD_CONFIG" ]; then
         PSCMD="$PSCMD --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\""
     fi
-    $POWERSHELL_PATH -Command "$PSCMD"
+    "$POWERSHELL_PATH" -Command "$PSCMD"
 }
 
 vpnkit_pid () {
-    $POWERSHELL_PATH -Command "( \
+    "$POWERSHELL_PATH" -Command "( \
         Get-Process | \
         Where-Object { \$_.Path -eq \"${VPNKIT_PATH//\//\\}\" } | \
         Sort-Object -Property StartTime -Descending | \
@@ -64,7 +64,7 @@ ipconfig () {
 
 close () {
     kill $PID_RELAY $PID_TAP
-    $POWERSHELL_PATH -Command "Stop-Process -Id $PID_VPNKIT"
+    "$POWERSHELL_PATH" -Command "Stop-Process -Id $PID_VPNKIT"
 }
 
 relay &
