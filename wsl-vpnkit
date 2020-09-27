@@ -18,6 +18,7 @@ TAP_NAME=eth1
 PID_RELAY=
 PID_VPNKIT=
 PID_TAP=
+IP_ROUTE=
 
 relay () {
     socat UNIX-LISTEN:$SOCKET_PATH,fork,group=netdev,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
@@ -55,16 +56,17 @@ tap () {
 }
 
 ipconfig () {
-    ifconfig $TAP_NAME up
-    ifconfig $TAP_NAME $VPNKIT_LOWEST_IP
-    ifconfig $TAP_NAME netmask 255.255.255.0
-    ip route del $(ip route | grep default)
+    ifconfig $TAP_NAME $VPNKIT_LOWEST_IP netmask 255.255.255.0 up
+    IP_ROUTE=$(ip route | grep default)
+    ip route del $IP_ROUTE
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
 }
 
 close () {
     kill $PID_RELAY $PID_TAP
     "$POWERSHELL_PATH" -Command "Stop-Process -Id $PID_VPNKIT"
+    ifconfig $TAP_NAME down
+    ip route add $IP_ROUTE
 }
 
 relay &
