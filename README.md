@@ -1,6 +1,8 @@
 # wsl-vpnkit
 
-Uses VPNKit to provide network connectivity to the WSL2 VM through the host's VPN.
+Uses [VPNKit](https://github.com/moby/vpnkit) to provide network connectivity to the WSL2 VM. This requires no settings changes or admin privileges on the Windows host.
+
+For a detailed look at how this works, see [this explanation of how VPNKit works](https://github.com/moby/vpnkit/blob/master/docs/ethernet.md#plumbing-inside-docker-for-windows). `vpnkit-tap-vsockd` acts as the network device inside the WSL VM, and `vpnkit` handles the requests on the Windows host. This uses `socat` and `npiperelay` to take advantage of the WSL inter-process integration instead of setting up a new Hyper-V socket integration service.
 
 ## Setup
 
@@ -45,6 +47,8 @@ sudo apt install socat
 ```
 
 ### Configure WSL Distro
+
+Configure to use `vpnkit.exe` as the DNS server. Unless configured otherwise, `vpnkit.exe` will use the Windows host DNS resolver. Specify another DNS server to bypass this.
 
 ```sh
 cat <<EOL
@@ -98,11 +102,13 @@ sudo ./wsl-vpnkit
 
 Keep this terminal open.
 
-In some environments, you may need to explicitly pass the environment variable `WSL_INTEROP` to `sudo`.
+In some environments, explicitly pass the environment variable `WSL_INTEROP` to `sudo`.
 
 ```sh
 sudo --preserve-env=WSL_INTEROP ./wsl-vpnkit
 ```
+
+Services on the WSL2 VM should be accessible from the Windows host using `localhost` through [the WSL networking integrations](https://devblogs.microsoft.com/commandline/whats-new-for-wsl-in-insiders-preview-build-18945/#use-localhost-to-connect-to-your-linux-applications-from-windows). Services on the Windows host should be accessible using the IP from `VPNKIT_HOST_IP` (`192.168.67.2`).
 
 ## Troubleshooting
 
