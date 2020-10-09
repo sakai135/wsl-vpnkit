@@ -21,7 +21,7 @@ PID_TAP=
 IP_ROUTE=
 
 relay () {
-    socat UNIX-LISTEN:$SOCKET_PATH,fork,group=netdev,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
+    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
 }
 
 vpnkit () {
