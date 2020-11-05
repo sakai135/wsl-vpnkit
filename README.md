@@ -51,17 +51,16 @@ sudo apt install socat
 Configure to use `vpnkit.exe` as the DNS server. Unless configured otherwise, `vpnkit.exe` will use the Windows host DNS resolver. Specify another DNS server to bypass this.
 
 ```sh
-cat <<EOL
+sudo tee /etc/wsl.conf > /dev/null <<EOL
 [network]
 generateResolvConf = false
-EOL | sudo tee /etc/wsl.conf
+EOL
 ```
 
 ```sh
-sudo unlink /etc/resolv.conf
-cat <<EOL
+sudo tee /etc/resolv.conf > /dev/null <<EOL
 nameserver 192.168.67.1
-EOL | sudo tee /etc/resolv.conf
+EOL
 ```
 
 ### Configure `http_proxy.json` and `gateway_forwards.json`
