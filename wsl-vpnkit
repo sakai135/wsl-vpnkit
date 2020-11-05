@@ -3,7 +3,7 @@
 SOCKET_PATH=/var/run/wsl-vpnkit.sock
 PIPE_PATH="\\\\.\\pipe\\wsl-vpnkit"
 
-POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0//powershell.exe"
+POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe"
 
 VPNKIT_PATH="C:/Program Files/Docker/Docker/resources/vpnkit.exe"
 # VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
@@ -58,12 +58,13 @@ tap () {
 
 ipconfig () {
     ip a add $VPNKIT_LOWEST_IP/255.255.255.0 dev $TAP_NAME
-    ip link set $TAP_NAME up
+    ip link set dev $TAP_NAME up
     IP_ROUTE=$(ip route | grep default)
     ip route del $IP_ROUTE
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
     RESOLV_CONF=$(cat /etc/resolv.conf)
     echo "nameserver $VPNKIT_GATEWAY_IP" > /etc/resolv.conf
+
 }
 
 close () {
@@ -73,6 +74,11 @@ close () {
     ip route add $IP_ROUTE
     echo "$RESOLV_CONF" > /etc/resolv.conf
 }
+
+if [[ "$EUID" -ne 0 ]]; then 
+    echo "Please run this script as root"
+    exit 1
+fi
 
 relay &
 PID_RELAY=$!
