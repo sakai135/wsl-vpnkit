@@ -46,23 +46,6 @@ sudo ln -s /mnt/c/bin/npiperelay.exe /usr/local/bin/npiperelay.exe
 sudo apt install socat
 ```
 
-### Configure WSL Distro
-
-Configure to use `vpnkit.exe` as the DNS server. Unless configured otherwise, `vpnkit.exe` will use the Windows host DNS resolver. Specify another DNS server to bypass this.
-
-```sh
-sudo tee /etc/wsl.conf > /dev/null <<EOL
-[network]
-generateResolvConf = false
-EOL
-```
-
-```sh
-sudo tee /etc/resolv.conf > /dev/null <<EOL
-nameserver 192.168.67.1
-EOL
-```
-
 ### Configure `http_proxy.json` and `gateway_forwards.json`
 
 This step is only necessary for using a HTTP proxy or exposing some service from the Windows host to the WSL2 VM through VPNKit.
