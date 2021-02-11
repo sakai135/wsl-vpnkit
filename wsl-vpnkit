@@ -1,7 +1,7 @@
-#! /bin/bash
+#! /bin/sh
 
 SOCKET_PATH=/var/run/wsl-vpnkit.sock
-PIPE_PATH="\\\\.\\pipe\\wsl-vpnkit"
+PIPE_PATH="//./pipe/wsl-vpnkit"
 
 POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe"
 
@@ -15,19 +15,17 @@ VPNKIT_HIGHEST_IP="192.168.67.14"
 
 TAP_NAME=eth1
 
-PID_RELAY=
 PID_VPNKIT=
-PID_TAP=
 IP_ROUTE=
 RESOLV_CONF=
 
 relay () {
-    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"npiperelay.exe -ep -s ${PIPE_PATH//\\//}",nofork
+    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"npiperelay.exe -ep -s $PIPE_PATH",nofork
 }
 
 vpnkit () {
     PSCMD="& \"$VPNKIT_PATH\" \
-        --ethernet $PIPE_PATH \
+        --ethernet \"$PIPE_PATH\".Replace('/','\\') \
         --listen-backlog 32 \
         --gateway-ip $VPNKIT_GATEWAY_IP \
         --host-ip $VPNKIT_HOST_IP \
@@ -46,7 +44,7 @@ vpnkit () {
 vpnkit_pid () {
     "$POWERSHELL_PATH" -Command "( \
         Get-Process | \
-        Where-Object { \$_.Path -eq \"${VPNKIT_PATH//\//\\}\" } | \
+        Where-Object { \$_.Path -eq \"$VPNKIT_PATH\".Replace('/','\\') } | \
         Sort-Object -Property StartTime -Descending | \
         Select-Object -First 1 \
     ).Id"
@@ -68,27 +66,26 @@ ipconfig () {
 }
 
 close () {
-    kill $PID_RELAY $PID_TAP
     "$POWERSHELL_PATH" -Command "Stop-Process -Id $PID_VPNKIT"
     ip link set dev $TAP_NAME down
     ip route add $IP_ROUTE
     echo "$RESOLV_CONF" > /etc/resolv.conf
+    kill 0
 }
 
-if [[ "$EUID" -ne 0 ]]; then 
+if [ ${EUID:-$(id -u)} -ne 0 ]; then
     echo "Please run this script as root"
     exit 1
 fi
 
 relay &
-PID_RELAY=$!
 sleep 3
 vpnkit &
 PID_VPNKIT=$(vpnkit_pid)
 sleep 3
 tap &
-PID_TAP=$!
 sleep 3
 ipconfig
 trap close exit
+trap exit int term
 wait
