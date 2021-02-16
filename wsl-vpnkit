@@ -5,7 +5,7 @@ PIPE_PATH="//./pipe/wsl-vpnkit"
 
 POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe"
 
-VPNKIT_PATH="C:/Program Files/Docker/Docker/resources/vpnkit.exe"
+VPNKIT_PATH=${VPNKIT_PATH:-C:/Program Files/Docker/Docker/resources/vpnkit.exe}
 # VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
 # VPNKIT_GATEWAY_FORWARD_CONFIG="\$env:APPDATA/Docker/gateway_forwards.json"
 VPNKIT_GATEWAY_IP="192.168.67.1"
