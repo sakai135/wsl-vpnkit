@@ -6,21 +6,26 @@ For a detailed look at how this works, see [this explanation of how VPNKit works
 
 ## Setup
 
+This will use the WSL environment to setup `wsl-vpnkit`. If you do not have connectivity in WSL 2, you can [switch your WSL version](https://docs.microsoft.com/en-us/windows/wsl/install-win10#set-your-distribution-version-to-wsl-1-or-wsl-2) to WSL 1 for setup and back to WSL 2 once done. Alternatively, you can refer to [this post to setup `wsl-vpnkit` from the Windows side](https://github.com/sakai135/wsl-vpnkit/issues/11#issuecomment-777806102).
+
 ### Install `vpnkit.exe` and `vpnkit-tap-vsockd`
 
-This step expects [Docker Desktop for Windows](https://hub.docker.com/editions/community/docker-ce-desktop-windows/) to be installed. Alternatively, build `vpnkit.exe` and `vpnkit-tap-vsockd` from [VPNKit](https://github.com/moby/vpnkit).
-
-With Docker Desktop installed, `vpnkit.exe` is ready for use. Extract `vpnkit-tap-vsockd` from Docker Desktop:
+This will download and extract `vpnkit.exe` and `vpnkit-tap-vsockd` from the [Docker Desktop for Windows installer](https://docs.docker.com/docker-for-windows/install/). Alternatively, build `vpnkit.exe` and `vpnkit-tap-vsockd` from [VPNKit](https://github.com/moby/vpnkit).
 
 ```sh
-sudo apt install genisoimage
+sudo apt install p7zip genisoimage
 ```
 
 ```sh
-isoinfo -i /mnt/c/Program\ Files/Docker/Docker/resources/wsl/docker-for-wsl.iso -R -x /containers/services/vpnkit-tap-vsockd/lower/sbin/vpnkit-tap-vsockd > ./vpnkit-tap-vsockd
+wget https://desktop.docker.com/win/stable/amd64/Docker%20Desktop%20Installer.exe
+7zr e Docker\ Desktop\ Installer.exe resources/vpnkit.exe resources/wsl/docker-for-wsl.iso
+mkdir -p /mnt/c/bin
+mv vpnkit.exe /mnt/c/bin/
+isoinfo -i docker-for-wsl.iso -R -x /containers/services/vpnkit-tap-vsockd/lower/sbin/vpnkit-tap-vsockd > ./vpnkit-tap-vsockd
 chmod +x vpnkit-tap-vsockd
 sudo mv vpnkit-tap-vsockd /sbin/vpnkit-tap-vsockd
 sudo chown root:root /sbin/vpnkit-tap-vsockd
+rm Docker\ Desktop\ Installer.exe docker-for-wsl.iso
 ```
 
 ### Install `npiperelay.exe`
@@ -35,7 +40,7 @@ sudo apt install unzip
 wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip
 unzip npiperelay_windows_amd64.zip npiperelay.exe
 rm npiperelay_windows_amd64.zip
-mkdir /mnt/c/bin
+mkdir -p /mnt/c/bin
 mv npiperelay.exe /mnt/c/bin/
 sudo ln -s /mnt/c/bin/npiperelay.exe /usr/local/bin/npiperelay.exe
 ```
