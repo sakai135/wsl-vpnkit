@@ -79,21 +79,7 @@ Docker Desktop will automatically generate and update `http_proxy.json` and `gat
 
 ### Configure VS Code Remote WSL Extension
 
-This is an optional workaround if the VPN on the Windows host blocks connections to the WSL2 VM and VS Code takes a while to open files within WSL2.
-
-`~\.vscode\extensions\ms-vscode-remote.remote-wsl-0.44.5\dist\wslDaemon.js`
-
-Look for something like this:
-
-```js
-async function P(e,t,s){if(l.isWSL1(s))return"127.0.0.1";}
-```
-
-Insert `::1` to force use of IPv6 localhost:
-
-```js
-async function P(e,t,s){return"::1";if(l.isWSL1(s))return"127.0.0.1";}
-```
+If VS Code takes a long time to open your folder in WSL, [enable the setting "Connect Through Localhost"](https://github.com/microsoft/vscode-docs/blob/main/remote-release-notes/v1_54.md#fix-for-wsl-2-connection-issues-when-behind-a-proxy).
 
 ## Run
 
