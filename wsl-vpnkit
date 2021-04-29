@@ -3,11 +3,10 @@
 SOCKET_PATH=/var/run/wsl-vpnkit.sock
 PIPE_PATH="//./pipe/wsl-vpnkit"
 
-POWERSHELL_PATH="/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe"
-
-VPNKIT_PATH=${VPNKIT_PATH:-C:/Program Files/Docker/Docker/resources/vpnkit.exe}
-# VPNKIT_HTTP_CONFIG="\$env:APPDATA/Docker/http_proxy.json"
-# VPNKIT_GATEWAY_FORWARD_CONFIG="\$env:APPDATA/Docker/gateway_forwards.json"
+VPNKIT_PATH=${VPNKIT_PATH:-C:/bin/wsl-vpnkit.exe}
+# VPNKIT_HTTP_CONFIG="C:/Users/user/AppData/Roaming/Docker/http_proxy.json"
+# VPNKIT_GATEWAY_FORWARD_CONFIG="C:/Users/user/AppData/Roaming/Docker/gateway_forwards.json"
+VPNKIT_BACKLOG="32"
 VPNKIT_GATEWAY_IP="192.168.67.1"
 VPNKIT_HOST_IP="192.168.67.2"
 VPNKIT_LOWEST_IP="192.168.67.3"
@@ -15,7 +14,6 @@ VPNKIT_HIGHEST_IP="192.168.67.14"
 
 TAP_NAME=eth1
 
-PID_VPNKIT=
 IP_ROUTE=
 RESOLV_CONF=
 
@@ -24,30 +22,22 @@ relay () {
 }
 
 vpnkit () {
-    PSCMD="& \"$VPNKIT_PATH\" \
-        --ethernet \"$PIPE_PATH\".Replace('/','\\') \
-        --listen-backlog 32 \
+    WIN_PIPE_PATH=$(echo $PIPE_PATH | sed -e "s:/:\\\:g")
+    CMD="/mnt/c/bin/wsl-vpnkit.exe \
+        --ethernet $WIN_PIPE_PATH \
+        --listen-backlog $VPNKIT_BACKLOG \
         --gateway-ip $VPNKIT_GATEWAY_IP \
         --host-ip $VPNKIT_HOST_IP \
         --lowest-ip $VPNKIT_LOWEST_IP \
         --highest-ip $VPNKIT_HIGHEST_IP \
     "
     if [ "$VPNKIT_HTTP_CONFIG" ]; then
-        PSCMD="$PSCMD --http \"$VPNKIT_HTTP_CONFIG\""
+        CMD="$CMD --http \"$VPNKIT_HTTP_CONFIG\""
     fi
     if [ "$VPNKIT_GATEWAY_FORWARD_CONFIG" ]; then
-        PSCMD="$PSCMD --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\""
+        CMD="$CMD --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\""
     fi
-    "$POWERSHELL_PATH" -Command "$PSCMD"
-}
-
-vpnkit_pid () {
-    "$POWERSHELL_PATH" -Command "( \
-        Get-Process | \
-        Where-Object { \$_.Path -eq \"$VPNKIT_PATH\".Replace('/','\\') } | \
-        Sort-Object -Property StartTime -Descending | \
-        Select-Object -First 1 \
-    ).Id"
+    $CMD
 }
 
 tap () {
@@ -62,11 +52,9 @@ ipconfig () {
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
     RESOLV_CONF=$(cat /etc/resolv.conf)
     echo "nameserver $VPNKIT_GATEWAY_IP" > /etc/resolv.conf
-
 }
 
 close () {
-    "$POWERSHELL_PATH" -Command "Stop-Process -Id $PID_VPNKIT"
     ip link set dev $TAP_NAME down
     ip route add $IP_ROUTE
     echo "$RESOLV_CONF" > /etc/resolv.conf
@@ -81,7 +69,6 @@ fi
 relay &
 sleep 3
 vpnkit &
-PID_VPNKIT=$(vpnkit_pid)
 sleep 3
 tap &
 sleep 3
