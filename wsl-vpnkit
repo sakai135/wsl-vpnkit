@@ -4,6 +4,7 @@ SOCKET_PATH=/var/run/wsl-vpnkit.sock
 PIPE_PATH="//./pipe/wsl-vpnkit"
 
 VPNKIT_PATH=${VPNKIT_PATH:-/mnt/c/bin/wsl-vpnkit.exe}
+VPNKIT_NPIPERELAY_PATH=${VPNKIT_NPIPERELAY_PATH:-/mnt/c/bin/npiperelay.exe}
 # VPNKIT_HTTP_CONFIG="C:/Users/user/AppData/Roaming/Docker/http_proxy.json"
 # VPNKIT_GATEWAY_FORWARD_CONFIG="C:/Users/user/AppData/Roaming/Docker/gateway_forwards.json"
 VPNKIT_BACKLOG="32"
@@ -18,7 +19,7 @@ IP_ROUTE=
 RESOLV_CONF=
 
 relay () {
-    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"npiperelay.exe -ep -s $PIPE_PATH",nofork
+    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$VPNKIT_NPIPERELAY_PATH -ep -s $PIPE_PATH",nofork
 }
 
 vpnkit () {

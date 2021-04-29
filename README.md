@@ -40,7 +40,6 @@ unzip npiperelay_windows_amd64.zip npiperelay.exe
 rm npiperelay_windows_amd64.zip
 mkdir -p /mnt/c/bin
 mv npiperelay.exe /mnt/c/bin/
-sudo ln -s /mnt/c/bin/npiperelay.exe /usr/local/bin/npiperelay.exe
 ```
 
 ### Install `socat`
