@@ -83,6 +83,52 @@ sudo --preserve-env=WSL_INTEROP ./wsl-vpnkit
 
 Services on the WSL2 VM should be accessible from the Windows host using `localhost` through [the WSL networking integrations](https://devblogs.microsoft.com/commandline/whats-new-for-wsl-in-insiders-preview-build-18945/#use-localhost-to-connect-to-your-linux-applications-from-windows). Services on the Windows host should be accessible using the IP from `VPNKIT_HOST_IP` (`192.168.67.2`).
 
+## Run in the Background
+
+This is an example setup to run `wsl-vpnkit` in the background.
+
+### Use `start-stop-daemon`
+
+This will use `start-stop-daemon` to create a daemon from the `wsl-vpnkit` script.
+
+```sh
+sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --background --start
+```
+
+```sh
+sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --stop
+```
+
+### Setup Sudoers
+
+This allows running the `wsl-vpnkit` daemon without entering a password every time.
+
+This step can be dangerous. Read [Sudoers](https://help.ubuntu.com/community/Sudoers) before doing this step.
+
+```sh
+sudo visudo -f /etc/sudoers.d/wsl-vpnkit
+```
+
+```
+yourusername ALL=(ALL) NOPASSWD: /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid *
+```
+
+### Run in the Background
+
+Starting the `wsl-vpnkit` daemon from Windows using `wsl.exe` allows the daemon to run in the background.
+
+```
+wsl -- sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --background --start
+```
+
+Create a `.bat` file with the above command. You can run the `.bat` file to start `wsl-vpnkit`. Placing it in your startup folder will run `wsl-vpnkit` when you log on to Windows.
+
+Alternatively, run this in an elevated PowerShell to create a scheduled task for starting `wsl-vpnkit`.
+
+```powershell
+Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute 'wsl' -Argument '-- sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --background --start') -Trigger (New-ScheduledTaskTrigger -AtLogOn) -TaskName 'start wsl-vpnkit'
+```
+
 ## Troubleshooting
 
 ### Configure VS Code Remote WSL Extension
