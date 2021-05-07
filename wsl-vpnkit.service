@@ -1,0 +1,46 @@
+#! /bin/sh
+
+WSLVPNKIT_PATH="$(realpath $0 | sed 's/.service//')"
+PID_PATH="/var/run/wsl-vpnkit.pid"
+LOG_PATH="/var/log/wsl-vpnkit.log"
+
+cmd="/sbin/start-stop-daemon --startas /bin/sh --make-pidfile --remove-pidfile --pidfile $PID_PATH"
+ret=0
+
+start() {
+        # using `wsl.exe` allows the daemon to keep running in the background even when you close your terminal
+        /mnt/c/WINDOWS/system32/wsl.exe --user $(whoami) -- $cmd --oknodo --background --start -- -c "exec $WSLVPNKIT_PATH >> $LOG_PATH 2>&1"
+        ret=$?
+}
+
+stop() {
+        $cmd --oknodo --stop
+        ret=$?
+}
+
+status() {
+        $cmd --status
+        ret=$?
+        echo "status is $ret"
+}
+
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        status)
+                status
+                ;;
+        restart)
+                stop
+                start
+                ;;
+        *)
+                echo "Usage: wsl-vpnkit {start|stop|restart|status}"
+                exit 1
+esac
+
+exit $ret
