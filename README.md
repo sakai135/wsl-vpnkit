@@ -115,18 +115,10 @@ yourusername ALL=(ALL) NOPASSWD: /sbin/start-stop-daemon --startas /path/to/wsl-
 
 ### Run in the Background
 
-Starting the `wsl-vpnkit` daemon from Windows using `wsl.exe` allows the daemon to run in the background.
+Starting the `wsl-vpnkit` daemon from Windows using `wsl.exe` allows the daemon to keep running in the background. Add the following to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
 
-```
-wsl -- sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --background --start
-```
-
-Create a `.bat` file with the above command. You can run the `.bat` file to start `wsl-vpnkit`. Placing it in your startup folder will run `wsl-vpnkit` when you log on to Windows.
-
-Alternatively, run this in an elevated PowerShell to create a scheduled task for starting `wsl-vpnkit`.
-
-```powershell
-Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute 'wsl' -Argument '-- sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --background --start') -Trigger (New-ScheduledTaskTrigger -AtLogOn) -TaskName 'start wsl-vpnkit'
+```sh
+wsl.exe -- sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --quiet --oknodo --background --start
 ```
 
 ## Troubleshooting
@@ -144,8 +136,6 @@ Set the variables `VPNKIT_HTTP_CONFIG` and/or `VPNKIT_GATEWAY_FORWARD_CONFIG` to
 `http_proxy.json` points to any HTTP proxies that might be configured on the Windows host. See an [example `http_proxy.json` from VPNKit](https://github.com/moby/vpnkit/blob/v0.5.0/src/bin/main.ml#L714-L721).
 
 `gateway_forwards.json` points to any services to forward to the WSL 2 VM. See an [example `gateway_forwards.json` from VPNKit](https://github.com/moby/vpnkit/blob/bfd0458bb811027cb9bd45f9ed8d63984b5d4a33/go/pkg/vpnkit/config_test.go#L28).
-
-
 
 ### Try shutting down WSL VM to reset
 
