@@ -85,23 +85,25 @@ Services on the WSL2 VM should be accessible from the Windows host using `localh
 
 ## Run in the Background
 
-This is an example setup to run `wsl-vpnkit` in the background.
-
-### Use `start-stop-daemon`
-
-This will use `start-stop-daemon` to create a daemon from the `wsl-vpnkit` script.
+This uses `wsl.exe` and `start-stop-daemon` to run `wsl-vpnkit` in the background. A log file will be created at `/var/log/wsl-vpnkit.log` with the output from `wsl-vpnkit`.
 
 ```sh
-sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --background --start
+sudo ./wsl-vpnkit.service start
 ```
 
+## Run as a Service
+
+This is an example setup to run `wsl-vpnkit` as a service.
+
+### Create Service
+
 ```sh
-sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --stop
+sudo ln -s $(pwd)/wsl-vpnkit.service /etc/init.d/wsl-vpnkit
 ```
 
 ### Setup Sudoers
 
-This allows running the `wsl-vpnkit` daemon without entering a password every time.
+This allows running the `wsl-vpnkit` service without entering a password every time.
 
 This step can be dangerous. Read [Sudoers](https://help.ubuntu.com/community/Sudoers) before doing this step.
 
@@ -110,15 +112,15 @@ sudo visudo -f /etc/sudoers.d/wsl-vpnkit
 ```
 
 ```
-yourusername ALL=(ALL) NOPASSWD: /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid *
+yourusername ALL=(ALL) NOPASSWD: /usr/sbin/service wsl-vpnkit *
 ```
 
-### Run in the Background
+### Run Automatically
 
-Starting the `wsl-vpnkit` daemon from Windows using `wsl.exe` allows the daemon to keep running in the background. Add the following to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
+Add the following to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
 
 ```sh
-wsl.exe -- sudo /sbin/start-stop-daemon --startas /path/to/wsl-vpnkit --make-pidfile --remove-pidfile --pidfile /var/run/wsl-vpnkit.pid --quiet --oknodo --background --start
+sudo service wsl-vpnkit start
 ```
 
 ## Troubleshooting
