@@ -8,10 +8,10 @@ VPNKIT_NPIPERELAY_PATH=${VPNKIT_NPIPERELAY_PATH:-/mnt/c/bin/npiperelay.exe}
 # VPNKIT_HTTP_CONFIG="C:/Users/user/AppData/Roaming/Docker/http_proxy.json"
 # VPNKIT_GATEWAY_FORWARD_CONFIG="C:/Users/user/AppData/Roaming/Docker/gateway_forwards.json"
 VPNKIT_BACKLOG="32"
-VPNKIT_GATEWAY_IP="192.168.67.1"
-VPNKIT_HOST_IP="192.168.67.2"
-VPNKIT_LOWEST_IP="192.168.67.3"
-VPNKIT_HIGHEST_IP="192.168.67.14"
+VPNKIT_GATEWAY_IP=$(ip route show | grep -oP 'src \K[^ ]+')    # WSL2 Linux IP
+VPNKIT_HOST_IP=$(ip route show | grep -oP 'via \K[^ ]+')       # Windows Host IP
+VPNKIT_LOWEST_IP=${VPNKIT_HOST_IP%.*}.3
+VPNKIT_HIGHEST_IP=${VPNKIT_HOST_IP%.*}.14
 
 TAP_NAME=eth1
 
