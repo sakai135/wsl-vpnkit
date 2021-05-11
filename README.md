@@ -50,7 +50,7 @@ sudo apt install socat
 
 ### Configure DNS for WSL
 
-Disable WSL from generating and overwriting `/etc/resolv.conf`.
+Disable WSL from generating and overwriting `/etc/resolv.conf` with the [network options in `wsl.conf`](https://docs.microsoft.com/en-us/windows/wsl/wsl-config#network).
 
 ```sh
 sudo tee /etc/wsl.conf <<EOL
@@ -59,12 +59,21 @@ generateResolvConf = false
 EOL
 ```
 
-Manually set DNS servers to use when not running this script. `1.1.1.1` is provided as an example.
+Close all shells and [wait for WSL to shutdown the distro](https://docs.microsoft.com/en-us/windows/wsl/wsl-config#configure-per-distro-launch-settings-with-wslconf) and reopen your shell for the change to take effect. You may need to run `wsl --shutdown`.
+
+Manually set DNS servers to use when not running `wsl-vpnkit`. [`1.1.1.1`](https://1.1.1.1/dns/) is provided here as an example.
 
 ```sh
 sudo tee /etc/resolv.conf <<EOL
 nameserver 1.1.1.1
 EOL
+```
+
+### Clone `wsl-vpnkit`
+
+```sh
+git clone https://github.com/sakai135/wsl-vpnkit.git
+cd wsl-vpnkit/
 ```
 
 ## Run
@@ -81,7 +90,7 @@ In some environments, explicitly pass the environment variable `WSL_INTEROP` to 
 sudo --preserve-env=WSL_INTEROP ./wsl-vpnkit
 ```
 
-Services on the WSL2 VM should be accessible from the Windows host using `localhost` through [the WSL networking integrations](https://devblogs.microsoft.com/commandline/whats-new-for-wsl-in-insiders-preview-build-18945/#use-localhost-to-connect-to-your-linux-applications-from-windows). Services on the Windows host should be accessible using the IP from `VPNKIT_HOST_IP` (`192.168.67.2`).
+Services on the WSL 2 VM should be accessible from the Windows host using `localhost` through [the WSL networking integrations](https://devblogs.microsoft.com/commandline/whats-new-for-wsl-in-insiders-preview-build-18945/#use-localhost-to-connect-to-your-linux-applications-from-windows) which can be configured by the [`localhostForwarding` option in `.wslconfig`](https://docs.microsoft.com/en-us/windows/wsl/wsl-config#wsl-2-settings). Services on the Windows host should be accessible from WSL 2 using the IP from `VPNKIT_HOST_IP` (`192.168.67.2`).
 
 ## Run in the Background
 
