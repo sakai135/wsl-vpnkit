@@ -25,24 +25,24 @@ relay () {
 
 vpnkit () {
     WIN_PIPE_PATH=$(echo $PIPE_PATH | sed -e "s:/:\\\:g")
-    CMD="$VPNKIT_PATH \
+    CMD='"$VPNKIT_PATH" \
         --ethernet $WIN_PIPE_PATH \
         --listen-backlog $VPNKIT_BACKLOG \
         --gateway-ip $VPNKIT_GATEWAY_IP \
         --host-ip $VPNKIT_HOST_IP \
         --lowest-ip $VPNKIT_LOWEST_IP \
         --highest-ip $VPNKIT_HIGHEST_IP \
-    "
+    '
     if [ "$VPNKIT_HTTP_CONFIG" ]; then
-        CMD="$CMD --http \"$VPNKIT_HTTP_CONFIG\""
+        CMD="$CMD --http \"\$VPNKIT_HTTP_CONFIG\""
     fi
     if [ "$VPNKIT_GATEWAY_FORWARD_CONFIG" ]; then
-        CMD="$CMD --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\""
+        CMD="$CMD --gateway-forwards \"\$VPNKIT_GATEWAY_FORWARD_CONFIG\""
     fi
     if [ "$VPNKIT_DEBUG" ]; then
         CMD="$CMD --debug"
     fi
-    $CMD
+    eval "$CMD"
 }
 
 tap () {
