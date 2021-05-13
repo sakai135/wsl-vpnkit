@@ -12,6 +12,7 @@ VPNKIT_GATEWAY_IP="192.168.67.1"
 VPNKIT_HOST_IP="192.168.67.2"
 VPNKIT_LOWEST_IP="192.168.67.3"
 VPNKIT_HIGHEST_IP="192.168.67.14"
+VPNKIT_DEBUG=$VPNKIT_DEBUG
 
 TAP_NAME=eth1
 
@@ -37,6 +38,9 @@ vpnkit () {
     fi
     if [ "$VPNKIT_GATEWAY_FORWARD_CONFIG" ]; then
         CMD="$CMD --gateway-forwards \"$VPNKIT_GATEWAY_FORWARD_CONFIG\""
+    fi
+    if [ "$VPNKIT_DEBUG" ]; then
+        CMD="$CMD --debug"
     fi
     $CMD
 }
