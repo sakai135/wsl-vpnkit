@@ -9,7 +9,8 @@ ret=0
 
 start() {
         # using `wsl.exe` allows the daemon to keep running in the background even when you close your terminal
-        /mnt/c/WINDOWS/system32/wsl.exe --user $(whoami) -- $cmd --oknodo --background --start -- -c "exec $WSLVPNKIT_PATH >> $LOG_PATH 2>&1"
+        DISTRO_NAME=$(basename $(wslpath -m /))
+        /mnt/c/WINDOWS/system32/wsl.exe --user $(whoami) --distribution $DISTRO_NAME -- $cmd --oknodo --background --start -- -c "exec $WSLVPNKIT_PATH >> $LOG_PATH 2>&1"
         ret=$?
 }
 
