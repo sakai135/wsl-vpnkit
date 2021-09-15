@@ -23,6 +23,12 @@ relay () {
     socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$VPNKIT_NPIPERELAY_PATH -ep -s $PIPE_PATH",nofork
 }
 
+relay_wait () {
+    while [ ! -S "$SOCKET_PATH" ]; do
+        sleep 0.1
+    done
+}
+
 vpnkit () {
     WIN_PIPE_PATH=$(echo $PIPE_PATH | sed -e "s:/:\\\:g")
     CMD='"$VPNKIT_PATH" \
@@ -49,6 +55,12 @@ tap () {
     vpnkit-tap-vsockd --tap $TAP_NAME --path $SOCKET_PATH
 }
 
+tap_wait () {
+    while [ ! -e "/sys/class/net/$TAP_NAME" ]; do
+        sleep 0.1
+    done
+}
+
 ipconfig () {
     ip a add $VPNKIT_LOWEST_IP/255.255.255.0 dev $TAP_NAME
     ip link set dev $TAP_NAME up
@@ -72,11 +84,10 @@ if [ ${EUID:-$(id -u)} -ne 0 ]; then
 fi
 
 relay &
-sleep 3
+relay_wait
 vpnkit &
-sleep 3
 tap &
-sleep 3
+tap_wait
 ipconfig
 trap close exit
 trap exit int term
