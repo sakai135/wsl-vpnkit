@@ -24,9 +24,11 @@ relay () {
 }
 
 relay_wait () {
+    echo "waiting for $SOCKET_PATH ..."
     while [ ! -S "$SOCKET_PATH" ]; do
         sleep 0.1
     done
+    echo "found $SOCKET_PATH"
 }
 
 vpnkit () {
@@ -56,9 +58,11 @@ tap () {
 }
 
 tap_wait () {
+    echo "waiting for $TAP_NAME ..."
     while [ ! -e "/sys/class/net/$TAP_NAME" ]; do
         sleep 0.1
     done
+    echo "found $TAP_NAME"
 }
 
 ipconfig () {
