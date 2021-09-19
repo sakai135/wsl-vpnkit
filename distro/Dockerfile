@@ -1,4 +1,4 @@
-FROM alpine:3.14.2 AS files
+FROM alpine:3.14.2 AS vpnkit
 WORKDIR /files
 RUN apk add --no-cache p7zip
 RUN wget https://desktop.docker.com/win/stable/amd64/67351/Docker%20Desktop%20Installer.exe  && \
@@ -6,15 +6,20 @@ RUN wget https://desktop.docker.com/win/stable/amd64/67351/Docker%20Desktop%20In
     7z e docker-for-wsl.iso containers/services/vpnkit-tap-vsockd/lower/sbin/vpnkit-tap-vsockd && \
     chmod +x vpnkit-tap-vsockd && \
     rm Docker%20Desktop%20Installer.exe docker-for-wsl.iso
-RUN wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip && \
-    7z e npiperelay_windows_amd64.zip npiperelay.exe && \
-    rm npiperelay_windows_amd64.zip
+
+FROM golang:1.17.1-alpine3.14 AS npiperelay
+WORKDIR /files
+ENV GOOS=windows
+RUN go mod init local/build && \
+    go get -d -v github.com/jstarks/npiperelay@v0.1.0 && \
+    GOOS=windows go build -o ./npiperelay.exe github.com/jstarks/npiperelay
 
 FROM alpine:3.14.2
 WORKDIR /app
 RUN apk add --no-cache socat openrc iptables
-COPY --from=files /files/npiperelay.exe /files/vpnkit.exe /files/
-COPY --from=files /files/vpnkit-tap-vsockd /usr/sbin/
+COPY --from=npiperelay /files/npiperelay.exe /files/
+COPY --from=vpnkit /files/vpnkit.exe /files/
+COPY --from=vpnkit /files/vpnkit-tap-vsockd /usr/sbin/
 COPY ./wsl-vpnkit /usr/sbin/
 COPY ./distro/wsl-vpnkit.service /etc/init.d/wsl-vpnkit
 COPY ./distro/startup.sh /etc/profile.d/
