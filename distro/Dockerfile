@@ -17,8 +17,11 @@ RUN go mod init local/build && \
     GOOS=windows go build -o ./npiperelay.exe github.com/jstarks/npiperelay
 
 FROM alpine:3.14.2
+ARG REF=0
 WORKDIR /app
-RUN apk add --no-cache socat openrc iptables
+RUN apk add --no-cache socat openrc iptables && \
+    mkdir /files && \
+    echo "$REF" > /files/ref
 COPY --from=npiperelay /files/npiperelay.exe /files/
 COPY --from=vpnkit /files/vpnkit.exe /files/
 COPY --from=vpnkit /files/vpnkit-tap-vsockd /usr/sbin/
