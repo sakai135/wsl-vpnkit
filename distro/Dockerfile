@@ -1,7 +1,9 @@
 FROM alpine:3.14.2 AS vpnkit
 WORKDIR /files
 RUN apk add --no-cache p7zip
+COPY ./distro/sha256sums ./
 RUN wget https://desktop.docker.com/win/stable/amd64/67351/Docker%20Desktop%20Installer.exe  && \
+    sha256sum -c sha256sums && \
     7z e Docker%20Desktop%20Installer.exe resources/vpnkit.exe resources/wsl/docker-for-wsl.iso && \
     7z e docker-for-wsl.iso containers/services/vpnkit-tap-vsockd/lower/sbin/vpnkit-tap-vsockd && \
     chmod +x vpnkit-tap-vsockd && \
