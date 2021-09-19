@@ -13,16 +13,17 @@ wsl -d wsl-vpnkit
 
 ## Run
 
+Run the following command from Windows or your other WSL 2 distros to start `wsl-vpnkit`. 
+
 ```sh
 wsl.exe -d wsl-vpnkit service wsl-vpnkit start
 ```
 
-Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
-
 ### Notes
 
-* Services on the WSL 2 VM are accessible from the Windows host using `localhost`. (ref [`localhostForwarding`](https://docs.microsoft.com/en-us/windows/wsl/wsl-config#wsl-2-settings))
-* Services on the Windows host are accessible from WSL 2 using the IP from `VPNKIT_HOST_IP` (`192.168.67.2`).
+* Add the command to your other WSL distros' `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
+* Services on the WSL 2 VM are accessible from the Windows host using `localhost`.
+* Services on the Windows host are accessible from WSL 2 using `host.internal`.
 
 ## Troubleshooting
 
