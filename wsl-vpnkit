@@ -15,7 +15,10 @@ VPNKIT_HIGHEST_IP="192.168.67.14"
 VPNKIT_WSL2_IP="$VPNKIT_LOWEST_IP"
 VPNKIT_DEBUG=
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
+USE_IPTABLES=1
 
+
+echo "starting wsl-vpnkit"
 if [ -f "$CONF_PATH" ]; then
     . "$CONF_PATH"
     echo "loaded $CONF_PATH"
@@ -84,17 +87,22 @@ ipconfig () {
     ip route del $(ip route | grep default)
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
 
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
-    iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
+    if [ "$USE_IPTABLES" ]; then
+        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
+        iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
+    fi
 }
 
 close () {
-    iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+    if [ "$USE_IPTABLES" ]; then
+        iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+        iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+    fi
 
     ip link set dev $TAP_NAME down
     ip route add default via $WSL2_GATEWAY_IP dev eth0
 
+    echo "stopped wsl-vpnkit"
     kill 0
 }
 
