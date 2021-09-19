@@ -16,5 +16,5 @@ RUN apk add --no-cache socat openrc iptables
 COPY --from=files /files/npiperelay.exe /files/vpnkit.exe /files/
 COPY --from=files /files/vpnkit-tap-vsockd /usr/sbin/
 COPY ./wsl-vpnkit /usr/sbin/
-COPY ./wsl-vpnkit.service /etc/init.d/wsl-vpnkit
-COPY ./startup.sh /etc/profile.d/
+COPY ./distro/wsl-vpnkit.service /etc/init.d/wsl-vpnkit
+COPY ./distro/startup.sh /etc/profile.d/

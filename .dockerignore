@@ -1,5 +1,5 @@
 .github
 .dockerignore
-Dockerfile
+distro/Dockerfile
 README.md
-test.sh
+distro/test.sh
