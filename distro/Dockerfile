@@ -20,6 +20,7 @@ FROM alpine:3.14.2
 ARG REF=0
 WORKDIR /app
 RUN apk add --no-cache socat openrc iptables && \
+    apk list --installed && \
     mkdir /files && \
     echo "$REF" > /files/ref
 COPY --from=npiperelay /files/npiperelay.exe /files/
