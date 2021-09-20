@@ -27,7 +27,7 @@ fi
 install () {
     if [ ! -f "$VPNKIT_PATH" ]; then
         mkdir -p "$(dirname $VPNKIT_PATH)"
-        cp /files/vpnkit.exe "$VPNKIT_PATH"
+        cp /files/vpnkit/vpnkit.exe "$VPNKIT_PATH"
         echo "copied vpnkit.exe to $VPNKIT_PATH"
     else
         echo "vpnkit.exe exists at $VPNKIT_PATH"
@@ -35,7 +35,7 @@ install () {
 
     if [ ! -f "$NPIPERELAY_PATH" ]; then
         mkdir -p "$(dirname $NPIPERELAY_PATH)"
-        cp /files/npiperelay.exe "$NPIPERELAY_PATH"
+        cp /files/npiperelay/npiperelay.exe "$NPIPERELAY_PATH"
         echo "copied npiperelay.exe to $NPIPERELAY_PATH"
     else
         echo "npiperelay.exe exists at $NPIPERELAY_PATH"

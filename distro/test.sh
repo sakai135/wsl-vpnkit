@@ -14,7 +14,6 @@ docker container rm $CONTAINER_ID
 ls -la $DUMP
 
 wsl.exe --unregister wsl-vpnkit
-rm -rf $USERPROFILE/wsl-vpnkit
 wsl.exe --import wsl-vpnkit "$USERPROFILE\\wsl-vpnkit" $DUMP
 rm $DUMP
 wsl.exe -d wsl-vpnkit
