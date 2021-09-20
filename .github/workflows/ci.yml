@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+    branches: [ $default-branch ]
+
+env:
+  TAG_NAME: ${{ format('wslvpnkit:{0}-{1}', github.sha, github.run_number) }}
+
+jobs:
+
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: |
+        docker build -t $TAG_NAME -f ./distro/Dockerfile --build-arg REF=$TAG_NAME .
+    - name: Package
+      run: |
+        CONTAINER_ID=$(docker create $TAG_NAME)
+        docker export $CONTAINER_ID | gzip > wsl-vpnkit.tar.gz
+        sha256sum wsl-vpnkit.tar.gz | tee wsl-vpnkit.tar.gz.sha256
+        ls -la wsl-vpnkit.tar.gz wsl-vpnkit.tar.gz.sha256
+    - name: Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: wsl-vpnkit
+        path: |
+          wsl-vpnkit.tar.gz
+          wsl-vpnkit.tar.gz.sha256
