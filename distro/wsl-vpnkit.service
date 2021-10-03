@@ -19,7 +19,9 @@ start() {
                 --stdout $LOG_PATH \
                 --stderr $LOG_PATH \
                 --exec wsl-vpnkit \
-                --start
+                --start \
+                --verbose \
+                --wait 2000
             "
     ret=$?
 }
