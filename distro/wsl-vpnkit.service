@@ -7,7 +7,7 @@ ret=0
 
 start() {
     # using `wsl.exe` allows the daemon to keep running in the background even when you close your terminal
-    /mnt/c/WINDOWS/system32/wsl.exe \
+    wsl.exe \
         --user root \
         --distribution $WSL_DISTRO_NAME \
         -- \
