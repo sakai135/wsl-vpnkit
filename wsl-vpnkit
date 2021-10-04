@@ -1,6 +1,6 @@
 #! /bin/sh
 
-USERPROFILE=$(wslpath "$(/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -c '$env:USERPROFILE' | tr -d '\r')")
+USERPROFILE=$(wslpath "$(powershell.exe -c '$env:USERPROFILE' | tr -d '\r')")
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
 SOCKET_PATH="/var/run/wsl-vpnkit.sock"
 PIPE_PATH="//./pipe/wsl-vpnkit"

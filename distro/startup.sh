@@ -1,7 +1,7 @@
 #! /bin/sh
 
 LOG_PATH="/var/log/wsl-vpnkit.log"
-USERPROFILE=$(wslpath "$(/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -c '$env:USERPROFILE' | tr -d '\r')")
+USERPROFILE=$(wslpath "$(powershell.exe -c '$env:USERPROFILE' | tr -d '\r')")
 
 touch $LOG_PATH
 

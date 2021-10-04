@@ -3,7 +3,7 @@
 # run from repo root
 # ./distro/test.sh
 
-USERPROFILE="$(/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -c '$env:USERPROFILE' | tr -d '\r')"
+USERPROFILE="$(powershell.exe -c '$env:USERPROFILE' | tr -d '\r')"
 DUMP=wsl-vpnkit.tar.gz
 TAG_NAME=wslvpnkit
 
