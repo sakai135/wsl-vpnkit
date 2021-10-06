@@ -19,7 +19,8 @@ RUN go mod init local/build && \
     cp /go/pkg/mod/github.com/jstarks/npiperelay@v0.1.0/LICENSE ./
 
 FROM alpine:3.14.2
-ARG REF=0
+ARG REF=https://example.com/
+ARG VERSION=v0.0.0
 WORKDIR /app
 COPY --from=npiperelay /files /files/npiperelay
 COPY --from=vpnkit /files /files/vpnkit
@@ -27,6 +28,7 @@ COPY ./ ./
 RUN apk add --no-cache socat openrc iptables && \
     apk list --installed && \
     echo "$REF" > /app/ref && \
+    echo "$VERSION" > /app/version && \
     ln -s /files/vpnkit/vpnkit-tap-vsockd /app/wsl-vpnkit /usr/sbin/ && \
     ln -s /app/distro/wsl-vpnkit.service /etc/init.d/wsl-vpnkit && \
     ln -s /app/distro/startup.sh /etc/profile.d/
