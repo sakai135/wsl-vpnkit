@@ -2,10 +2,12 @@
 
 LOG_PATH="/var/log/wsl-vpnkit.log"
 USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
+VERSION="$(cat /app/version)"
 
 touch $LOG_PATH
 
 echo "
+wsl-vpnkit $VERSION
 This distro is only intended for running wsl-vpnkit. 
 
 Run the following commands from Windows or other WSL 2 distros to use.

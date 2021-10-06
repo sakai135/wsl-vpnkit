@@ -1,6 +1,6 @@
 FROM alpine:3.14.2 AS vpnkit
 WORKDIR /files
-COPY ./distro/vpnkit/sha256sums ./
+COPY ./distro/vpnkit/ ./
 RUN apk add --no-cache p7zip && \
     wget https://desktop.docker.com/win/stable/amd64/67351/Docker%20Desktop%20Installer.exe  && \
     sha256sum -c sha256sums && \
@@ -12,7 +12,7 @@ RUN apk add --no-cache p7zip && \
 
 FROM golang:1.17.1-alpine3.14 AS npiperelay
 WORKDIR /files
-COPY ./distro/npiperelay/go.mod ./distro/npiperelay/go.sum ./
+COPY ./distro/npiperelay/ ./
 RUN go mod download -x && \
     GOOS=windows go build -o ./npiperelay.exe github.com/jstarks/npiperelay && \
     rm go.mod go.sum && \
@@ -24,7 +24,7 @@ ARG VERSION=v0.0.0
 WORKDIR /app
 COPY --from=npiperelay /files /files/npiperelay
 COPY --from=vpnkit /files /files/vpnkit
-COPY ./distro/wsl-vpnkit.service ./distro/startup.sh ./wsl-vpnkit ./LICENSE ./
+COPY ./distro/scripts/ ./wsl-vpnkit ./LICENSE ./
 RUN apk add --no-cache socat openrc iptables && \
     apk list --installed && \
     echo "$REF" > /app/ref && \
