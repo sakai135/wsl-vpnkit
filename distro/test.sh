@@ -3,7 +3,7 @@
 # run from repo root
 # ./distro/test.sh
 
-USERPROFILE="$(powershell.exe -c '$env:USERPROFILE' | tr -d '\r')"
+USERPROFILE="$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')"
 DUMP=wsl-vpnkit.tar.gz
 TAG_NAME=wslvpnkit
 

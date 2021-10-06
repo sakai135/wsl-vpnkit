@@ -49,7 +49,7 @@ cd wsl-vpnkit/
 The `wsl-vpnkit` script can be used as a normal script in your existing distro. This is an example setup script for Ubuntu.
 
 ```sh
-USERPROFILE=$(wslpath "$(powershell.exe -c '$env:USERPROFILE' | tr -d '\r')")
+USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
 mkdir -p "$USERPROFILE/wsl-vpnkit"
 
 sudo apt install p7zip-full socat
