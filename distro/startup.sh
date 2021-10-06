@@ -27,6 +27,7 @@ Config for wsl-vpnkit can be edited here. See the wsl-vpnkit script for possible
     $USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf
     wsl.exe -d $WSL_DISTRO_NAME cat /usr/sbin/wsl-vpnkit
 
-
+Press [enter] key to continue...
 "
+read _
 exit 0
