@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -e
 
 # run from repo root
 # ./distro/test.sh
