@@ -11,11 +11,16 @@ jobs:
 
   build:
     runs-on: ubuntu-20.04
+    permissions:
+      checks: write
     steps:
     - uses: actions/checkout@v2
     - name: Build
       run: |
         docker build -t $TAG_NAME -f ./distro/Dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
+    - uses: azure/container-scan@v0
+      with:
+        image-name: ${{ env.TAG_NAME }}
     - name: Package
       run: |
         CONTAINER_ID=$(docker create $TAG_NAME)

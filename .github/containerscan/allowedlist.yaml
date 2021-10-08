@@ -1,0 +1,5 @@
+general:
+  bestPracticeViolations:
+    - CIS-DI-0001 # Create a user for the container
+    - CIS-DI-0005 # Enable Content trust for Docker
+    - CIS-DI-0006 # Add HEALTHCHECK instruction to the container image
