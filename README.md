@@ -9,11 +9,13 @@ The releases bundle the script together with VPNKit and npiperelay in an [Alpine
 Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and import the distro into WSL 2. Running the distro will show a short intro and exit.
 
 ```pwsh
+# PowerShell
+
 wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 wsl -d wsl-vpnkit
 ```
 
-Start `wsl-vpnkit` from Windows or your other WSL 2 distros. Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
+Start `wsl-vpnkit` from your other WSL 2 distros. Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
 
 ```sh
 wsl.exe -d wsl-vpnkit service wsl-vpnkit start
@@ -24,11 +26,24 @@ wsl.exe -d wsl-vpnkit service wsl-vpnkit start
 * Services on the WSL 2 VM are accessible from the Windows host using `localhost`.
 * Services on the Windows host are accessible from WSL 2 using `host.internal`.
 
+### Update
+
+To update, unregister the existing distro and import the new version.
+
+```pwsh
+# PowerShell
+
+wsl --unregister wsl-vpnkit
+wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
+```
+
 ### Uninstall
 
 To uninstall, unregister the distro.
 
 ```pwsh
+# PowerShell
+
 wsl --unregister wsl-vpnkit
 rm -r $env:USERPROFILE\wsl-vpnkit
 ```
@@ -80,6 +95,8 @@ If VS Code takes a long time to open your folder in WSL, [enable the setting "Co
 ### Try shutting down WSL 2 VM to reset
 
 ```pwsh
+# PowerShell
+
 wsl --shutdown
 kill -Name wsl-vpnkit
 ```
