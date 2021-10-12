@@ -5,6 +5,7 @@ USERPROFILE=$(wslpath "$($POWERSHELL -c 'Write-Host -NoNewline $env:USERPROFILE'
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
 SOCKET_PATH="/var/run/wsl-vpnkit.sock"
 PIPE_PATH="//./pipe/wsl-vpnkit"
+TAP_PID_PATH="/var/run/vpnkit-tap-vsockd.pid"
 
 VPNKIT_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
 NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
@@ -44,6 +45,7 @@ install () {
 }
 
 relay () {
+    echo "starting socat-npiperelay..."
     socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$NPIPERELAY_PATH -ep -s $PIPE_PATH",nofork
 }
 
@@ -56,6 +58,7 @@ relay_wait () {
 }
 
 vpnkit () {
+    echo "starting vpnkit..."
     WIN_PIPE_PATH=$(echo $PIPE_PATH | sed -e "s:/:\\\:g")
     CMD='"$VPNKIT_PATH" \
         --ethernet $WIN_PIPE_PATH \
@@ -71,38 +74,44 @@ vpnkit () {
 }
 
 tap () {
-    vpnkit-tap-vsockd --tap $TAP_NAME --path $SOCKET_PATH
-}
-
-tap_wait () {
-    echo "waiting for $TAP_NAME ..."
-    while [ ! -e "/sys/class/net/$TAP_NAME" ]; do
-        sleep 0.1
-    done
-    echo "found $TAP_NAME"
+    echo "starting vpnkit-tap-vsockd..."
+    vpnkit-tap-vsockd --tap $TAP_NAME --path $SOCKET_PATH --daemon --pid $TAP_PID_PATH
+    echo "started vpnkit-tap-vsockd"
 }
 
 ipconfig () {
+    echo "configuring ip..."
     ip a add $VPNKIT_WSL2_IP/255.255.255.0 dev $TAP_NAME
     ip link set dev $TAP_NAME up
     ip route del $(ip route | grep default)
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
+    echo "ip config done"
 
     if [ "$USE_IPTABLES" ]; then
+        echo "adding rules to iptables..."
         iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
         iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
         iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
+        echo "iptables done"
     fi
 }
 
 close () {
     if [ "$USE_IPTABLES" ]; then
+        echo "removing rules from iptables..."
         iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
         iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+        echo "iptables done"
     fi
 
+    echo "configuring ip..."
     ip link set dev $TAP_NAME down
     ip route add default via $WSL2_GATEWAY_IP dev eth0
+    echo "ip config done"
+
+    echo "stopping vpnkit-tap-vsockd"
+    kill -- -$(cat $TAP_PID_PATH)
+    echo "stopped vpnkit-tap-vsockd"
 
     echo "stopped wsl-vpnkit"
     kill 0
@@ -117,8 +126,7 @@ install
 relay &
 relay_wait
 vpnkit &
-tap &
-tap_wait
+tap
 ipconfig
 trap close exit
 trap exit int term
