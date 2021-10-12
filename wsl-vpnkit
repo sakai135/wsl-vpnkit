@@ -90,6 +90,7 @@ ipconfig () {
 
     if [ "$USE_IPTABLES" ]; then
         iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
+        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
         iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
     fi
 }
