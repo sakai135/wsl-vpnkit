@@ -89,8 +89,10 @@ ipconfig () {
 
     if [ "$USE_IPTABLES" ]; then
         echo "adding rules to iptables..."
-        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
-        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP -j DNAT --to-destination $VPNKIT_GATEWAY_IP
+        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
         iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
         echo "iptables done"
     fi
@@ -100,6 +102,7 @@ close () {
     if [ "$USE_IPTABLES" ]; then
         echo "removing rules from iptables..."
         iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+        iptables -t nat -S | grep $VPNKIT_HOST_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
         iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
         echo "iptables done"
     fi
