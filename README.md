@@ -23,8 +23,8 @@ wsl.exe -d wsl-vpnkit service wsl-vpnkit start
 
 ### Notes
 
-* Services on the WSL 2 VM are accessible from the Windows host using `localhost`.
-* Services on the Windows host are accessible from WSL 2 using `host.internal`.
+* Ports on the WSL 2 VM are accessible from the Windows host using `localhost`.
+* Ports on the Windows host are accessible from WSL 2 using `host.internal`.
 
 ### Update
 
