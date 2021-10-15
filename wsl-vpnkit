@@ -17,8 +17,7 @@ VPNKIT_HIGHEST_IP="192.168.67.14"
 VPNKIT_WSL2_IP="$VPNKIT_LOWEST_IP"
 VPNKIT_DEBUG=
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-USE_IPTABLES=1
-
+CHECK_HOST=example.com
 
 echo "starting wsl-vpnkit"
 if [ -f "$CONF_PATH" ]; then
@@ -85,9 +84,13 @@ ipconfig () {
     ip link set dev $TAP_NAME up
     ip route del $(ip route | grep default)
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
+    ip route add $WSL2_GATEWAY_IP via $VPNKIT_GATEWAY_IP dev $TAP_NAME
     echo "ip config done"
 
-    if [ "$USE_IPTABLES" ]; then
+    if ping -c 1 $WSL2_GATEWAY_IP >/dev/null; then
+        echo "ping to Windows host successful"
+    else
+        echo "ping to Windows host failed"
         echo "adding rules to iptables..."
         iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
         iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
@@ -96,6 +99,30 @@ ipconfig () {
         iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
         echo "iptables done"
     fi
+}
+
+check_ping () {
+    ping -$1 -c 1 $3 >/dev/null && echo "check: ping success to $2 ($3) IPv$1" || echo "check: ping fail$([[ $1 = '6' ]] && echo ' as expected') to $2 ($3) IPv$1"
+}
+
+check_dns () {
+    TYPE=$([[ "$1" = "4" ]] && echo 'A' || echo 'AAAA')
+    nslookup -type=$TYPE $2 >/dev/null && echo "check: nslookup success for $2 $TYPE" || echo "check: nslookup fail for $2 $TYPE"
+}
+
+check_https () {
+    wget --spider $1 && echo "check: wget success for $1" || echo "check: wget fail for $1"
+}
+
+check () {
+    check_ping 4 'Windows host' $WSL2_GATEWAY_IP
+    check_ping 4 'Windows host' $VPNKIT_HOST_IP
+    check_ping 4 'VPNKit gateway' $VPNKIT_GATEWAY_IP
+    check_dns 4 $CHECK_HOST
+    check_ping 4 'external host' $CHECK_HOST
+    check_dns 6 $CHECK_HOST
+    check_ping 6 'external host' $CHECK_HOST
+    check_https "https://$CHECK_HOST"
 }
 
 cleanup () {
@@ -137,6 +164,7 @@ relay_wait
 vpnkit &
 tap
 ipconfig
+check
 trap close exit
 trap exit int term
 wait
