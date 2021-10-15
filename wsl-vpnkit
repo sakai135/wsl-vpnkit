@@ -98,24 +98,29 @@ ipconfig () {
     fi
 }
 
-close () {
-    if [ "$USE_IPTABLES" ]; then
-        echo "removing rules from iptables..."
-        iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-        iptables -t nat -S | grep $VPNKIT_HOST_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-        iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-        echo "iptables done"
-    fi
+cleanup () {
+    echo "cleaning up iptables..."
+    iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+    iptables -t nat -S | grep $VPNKIT_HOST_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+    iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
+    echo "iptables cleanup done"
 
-    echo "configuring ip..."
+    echo "cleaning up ip..."
     ip link set dev $TAP_NAME down
     ip route add default via $WSL2_GATEWAY_IP dev eth0
-    echo "ip config done"
+    echo "ip cleanup done"
 
-    echo "stopping vpnkit-tap-vsockd"
-    kill -- -$(cat $TAP_PID_PATH)
-    echo "stopped vpnkit-tap-vsockd"
+    if [ -f "$TAP_PID_PATH" ]; then
+        echo "stopping vpnkit-tap-vsockd"
+        kill -- -$(cat $TAP_PID_PATH)
+        echo "stopped vpnkit-tap-vsockd"
+    fi
 
+    $POWERSHELL -c 'Stop-Process -Force -Name wsl-vpnkit -ErrorAction SilentlyContinue'
+}
+
+close () {
+    cleanup
     echo "stopped wsl-vpnkit"
     kill 0
 }
@@ -125,6 +130,7 @@ if [ ${EUID:-$(id -u)} -ne 0 ]; then
     exit 1
 fi
 
+cleanup
 install
 relay &
 relay_wait
