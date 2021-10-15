@@ -26,22 +26,29 @@ if [ -f "$CONF_PATH" ]; then
     echo "loaded $CONF_PATH"
 fi
 
-install () {
-    if [ ! -f "$VPNKIT_PATH" ]; then
-        mkdir -p "$(dirname $VPNKIT_PATH)"
-        cp /files/vpnkit/vpnkit.exe "$VPNKIT_PATH"
-        echo "copied vpnkit.exe to $VPNKIT_PATH"
-    else
-        echo "vpnkit.exe exists at $VPNKIT_PATH"
-    fi
+hash () {
+    md5sum "$1" | awk '{ print $1 }'
+}
 
-    if [ ! -f "$NPIPERELAY_PATH" ]; then
-        mkdir -p "$(dirname $NPIPERELAY_PATH)"
-        cp /files/npiperelay/npiperelay.exe "$NPIPERELAY_PATH"
-        echo "copied npiperelay.exe to $NPIPERELAY_PATH"
-    else
-        echo "npiperelay.exe exists at $NPIPERELAY_PATH"
+install_file () {
+    if [ -f $2 ]; then
+        if [ ! -f "$3" ]; then
+            mkdir -p "$(dirname $3)"
+            cp $2 "$3"
+            echo "copied $1 to $3"
+        else
+            echo "$1 exists at $3"
+            if [[ `hash $2` != `hash "$3"` ]]; then
+                cp -f $2 "$3"
+                echo "updated $1 at $3"
+            fi
+        fi
     fi
+}
+
+install () {
+    install_file vpnkit.exe /files/vpnkit/vpnkit.exe "$VPNKIT_PATH"
+    install_file npiperelay.exe /files/npiperelay/npiperelay.exe "$NPIPERELAY_PATH"
 }
 
 relay () {
