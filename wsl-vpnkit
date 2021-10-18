@@ -19,6 +19,7 @@ VPNKIT_DEBUG=
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
 CHECK_HOST=example.com
 DNS_IP="$VPNKIT_GATEWAY_IP"
+CHECK_DNS=1.1.1.1
 
 echo "starting wsl-vpnkit"
 if [ -f "$CONF_PATH" ]; then
@@ -106,25 +107,37 @@ ipconfig () {
 }
 
 check_ping () {
-    ping -$1 -c 1 $3 >/dev/null && echo "check: ping success to $2 ($3) IPv$1" || echo "check: ping fail$([[ $1 = '6' ]] && echo ' as expected') to $2 ($3) IPv$1"
+    ping -$1 -c 1 $3 >/dev/null && \
+        echo "check: ✔️ ping success to IPv$1 $2 ($3)" || \
+        echo "check: $([[ $1 = '6' ]] && echo '➖' || echo '❌') ping fail to IPv$1 $2 ($3)"
 }
 
 check_dns () {
     TYPE=$([[ "$1" = "4" ]] && echo 'A' || echo 'AAAA')
-    nslookup -type=$TYPE $2 >/dev/null && echo "check: nslookup success for $2 $TYPE" || echo "check: nslookup fail for $2 $TYPE"
+    nslookup -type=$TYPE $2 $3 >/dev/null && \
+        echo "check: ✔️ nslookup success for $2 $TYPE using $3" || \
+        echo "check: ❌ nslookup fail for $2 $TYPE using $3"
 }
 
 check_https () {
-    wget --spider $1 && echo "check: wget success for $1" || echo "check: wget fail for $1"
+    wget --spider -q $1 && \
+        echo "check: ✔️ wget success for $1" || \
+        echo "check: ❌ wget fail for $1"
 }
 
 check () {
-    check_ping 4 'Windows host' $WSL2_GATEWAY_IP
-    check_ping 4 'Windows host' $VPNKIT_HOST_IP
+    check_ping 4 'WSL 2 gateway / Windows host' $WSL2_GATEWAY_IP
+    check_ping 4 'VPNKit Windows host' $VPNKIT_HOST_IP
     check_ping 4 'VPNKit gateway' $VPNKIT_GATEWAY_IP
-    check_dns 4 $CHECK_HOST
+    check_dns 4 $CHECK_HOST $DNS_IP
+    check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
+    check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
+    check_dns 4 $CHECK_HOST $CHECK_DNS
     check_ping 4 'external host' $CHECK_HOST
-    check_dns 6 $CHECK_HOST
+    check_dns 6 $CHECK_HOST $DNS_IP
+    check_dns 6 $CHECK_HOST $VPNKIT_GATEWAY_IP
+    check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
+    check_dns 6 $CHECK_HOST $CHECK_DNS
     check_ping 6 'external host' $CHECK_HOST
     check_https "https://$CHECK_HOST"
 }
