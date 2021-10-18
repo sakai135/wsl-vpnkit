@@ -84,21 +84,15 @@ ipconfig () {
     ip link set dev $TAP_NAME up
     ip route del $(ip route | grep default)
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
-    ip route add $WSL2_GATEWAY_IP via $VPNKIT_GATEWAY_IP dev $TAP_NAME
     echo "ip config done"
 
-    if ping -c 1 $WSL2_GATEWAY_IP >/dev/null; then
-        echo "ping to Windows host successful"
-    else
-        echo "ping to Windows host failed"
-        echo "adding rules to iptables..."
-        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
-        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
-        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-        iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
-        echo "iptables done"
-    fi
+    echo "adding rules to iptables..."
+    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
+    echo "iptables done"
 }
 
 check_ping () {
