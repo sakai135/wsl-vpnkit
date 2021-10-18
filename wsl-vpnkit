@@ -17,8 +17,8 @@ VPNKIT_HIGHEST_IP="192.168.67.14"
 VPNKIT_WSL2_IP="$VPNKIT_LOWEST_IP"
 VPNKIT_DEBUG=
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-USE_IPTABLES=1
 CHECK_HOST=example.com
+DNS_IP="$VPNKIT_GATEWAY_IP"
 
 echo "starting wsl-vpnkit"
 if [ -f "$CONF_PATH" ]; then
@@ -94,19 +94,15 @@ ipconfig () {
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
     echo "ip config done"
 
-    if [ "$USE_IPTABLES" ]; then
-        echo "adding rules to iptables..."
-        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
-        iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
-        iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-        iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
-        echo "iptables done"
-    else
-        echo "adding route for Windows host via VPNKit..."
-        ip route add $WSL2_GATEWAY_IP via $VPNKIT_GATEWAY_IP dev $TAP_NAME src $VPNKIT_WSL2_IP
-        echo "added route for Windows host via VPNKit"
-    fi
+    echo "adding rules to iptables..."
+    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
+    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $DNS_IP:53
+    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
+    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $DNS_IP:53
+    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
+    echo "iptables done"
 }
 
 check_ping () {
