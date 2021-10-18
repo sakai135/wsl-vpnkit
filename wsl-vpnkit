@@ -90,7 +90,7 @@ ipconfig () {
     echo "configuring ip..."
     ip a add $VPNKIT_WSL2_IP/255.255.255.0 dev $TAP_NAME
     ip link set dev $TAP_NAME up
-    ip route del $(ip route | grep default)
+    ip route | grep -e "$VPNKIT_GATEWAY_IP" -e 'default' | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
     echo "ip config done"
 
@@ -141,6 +141,7 @@ cleanup () {
     echo "iptables cleanup done"
 
     echo "cleaning up ip..."
+    ip route | grep -e "$VPNKIT_GATEWAY_IP" -e 'default' | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
     ip link set dev $TAP_NAME down
     ip route add default via $WSL2_GATEWAY_IP dev eth0
     echo "ip cleanup done"
