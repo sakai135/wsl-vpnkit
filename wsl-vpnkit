@@ -19,7 +19,6 @@ VPNKIT_DEBUG=
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
 USE_IPTABLES=1
 
-
 echo "starting wsl-vpnkit"
 if [ -f "$CONF_PATH" ]; then
     . "$CONF_PATH"
@@ -102,6 +101,10 @@ ipconfig () {
         iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
         iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
         echo "iptables done"
+    else
+        echo "adding route for Windows host via VPNKit..."
+        ip route add $WSL2_GATEWAY_IP via $VPNKIT_GATEWAY_IP dev $TAP_NAME
+        echo "added route for Windows host via VPNKit"
     fi
 }
 
