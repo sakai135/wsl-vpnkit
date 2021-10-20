@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 POWERSHELL="$(command -v powershell.exe || echo '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe')"
 USERPROFILE=$(wslpath "$($POWERSHELL -c 'Write-Host -NoNewline $env:USERPROFILE')")
@@ -39,7 +39,7 @@ install_file () {
             echo "copied $1 to $3"
         else
             echo "$1 exists at $3"
-            if [[ `hash $2` != `hash "$3"` ]]; then
+            if [ `hash $2` != `hash "$3"` ]; then
                 cp -f $2 "$3"
                 echo "updated $1 at $3"
             fi
@@ -109,11 +109,11 @@ ipconfig () {
 check_ping () {
     ping -$1 -c 1 $3 >/dev/null && \
         echo "check: ✔️ ping success to IPv$1 $2 ($3)" || \
-        echo "check: $([[ $1 = '6' ]] && echo '➖' || echo '❌') ping fail to IPv$1 $2 ($3)"
+        echo "check: $([ $1 = '6' ] && echo '➖' || echo '❌') ping fail to IPv$1 $2 ($3)"
 }
 
 check_dns () {
-    TYPE=$([[ "$1" = "4" ]] && echo 'A' || echo 'AAAA')
+    TYPE=$([ "$1" = "4" ] && echo 'A' || echo 'AAAA')
     nslookup -type=$TYPE $2 $3 >/dev/null && \
         echo "check: ✔️ nslookup success for $2 $TYPE using $3" || \
         echo "check: ❌ nslookup fail for $2 $TYPE using $3"
