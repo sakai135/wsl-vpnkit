@@ -13,6 +13,7 @@ This distro is only intended for running wsl-vpnkit.
 Run the following commands from Windows or other WSL 2 distros to use.
 
     wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit start
+    wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit status
     wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit stop
 
 The following files will be copied if they do not already exist.

@@ -24,6 +24,13 @@ start() {
     ret=$?
 }
 
+status() {
+    start-stop-daemon
+        --status
+    ret=$?
+    echo "status is $ret"
+}
+
 stop() {
     start-stop-daemon \
         --pidfile $PID_PATH \
@@ -35,11 +42,14 @@ case "$1" in
     start)
         start
         ;;
+    status)
+        status
+        ;;
     stop)
         stop
         ;;
     *)
-        echo "Usage: wsl-vpnkit {start|stop}"
+        echo "Usage: wsl-vpnkit {start|status|stop}"
         exit 1
 esac
 
