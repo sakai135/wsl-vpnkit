@@ -18,7 +18,12 @@ wsl -d wsl-vpnkit
 Start `wsl-vpnkit` from your other WSL 2 distros. Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
 
 ```sh
-wsl.exe -d wsl-vpnkit service wsl-vpnkit start
+# WSL vpnkit
+if [ `wsl.exe -d wsl-vpnkit service wsl-vpnkit status | grep "status is 0" | wc -l` -ne 1 ]
+then
+    echo "Start service wsl-vpnkit"
+    wsl.exe -d wsl-vpnkit service wsl-vpnkit start
+fi
 ```
 
 ### Notes
