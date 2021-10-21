@@ -25,7 +25,8 @@ start() {
 }
 
 status() {
-    start-stop-daemon
+    start-stop-daemon \
+        --pidfile $PID_PATH \
         --status
     ret=$?
     echo "status is $ret"
