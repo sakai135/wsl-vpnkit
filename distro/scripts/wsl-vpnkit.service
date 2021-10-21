@@ -6,21 +6,14 @@ LOG_PATH="/var/log/wsl-vpnkit.log"
 ret=0
 
 start() {
-    # using `wsl.exe` allows the daemon to keep running in the background even when you close your terminal
-    wsl.exe \
-        --user root \
-        --distribution $WSL_DISTRO_NAME \
-        -- \
-            sh -c "\
-            start-stop-daemon \
-                --pidfile $PID_PATH \
-                --make-pidfile \
-                --background \
-                --stdout $LOG_PATH \
-                --stderr $LOG_PATH \
-                --exec wsl-vpnkit \
-                --start
-            "
+    start-stop-daemon \
+        --pidfile $PID_PATH \
+        --make-pidfile \
+        --background \
+        --stdout $LOG_PATH \
+        --stderr $LOG_PATH \
+        --exec wsl-vpnkit \
+        --start
     ret=$?
 }
 
