@@ -69,10 +69,8 @@ mkdir -p "$USERPROFILE/wsl-vpnkit"
 
 sudo apt install p7zip-full socat
 
-wget https://desktop.docker.com/win/stable/amd64/67351/Docker%20Desktop%20Installer.exe
-7z e Docker\ Desktop\ Installer.exe resources/vpnkit.exe resources/wsl/docker-for-wsl.iso
-7z e docker-for-wsl.iso containers/services/vpnkit-tap-vsockd/lower/sbin/vpnkit-tap-vsockd
-rm Docker\ Desktop\ Installer.exe docker-for-wsl.iso
+wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211025/vpnkit-tap-vsockd
+wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211025/vpnkit.exe
 mv vpnkit.exe "$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
 chmod +x vpnkit-tap-vsockd
 sudo chown root:root vpnkit-tap-vsockd
