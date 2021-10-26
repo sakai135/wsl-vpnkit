@@ -69,8 +69,8 @@ mkdir -p "$USERPROFILE/wsl-vpnkit"
 
 sudo apt install p7zip-full socat
 
-wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211025/vpnkit-tap-vsockd
-wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211025/vpnkit.exe
+wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd
+wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe
 mv vpnkit.exe "$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
 chmod +x vpnkit-tap-vsockd
 sudo chown root:root vpnkit-tap-vsockd

@@ -2,9 +2,9 @@ FROM alpine:3.14.2 AS vpnkit
 RUN apk add --no-cache p7zip && \
     apk list --installed
 WORKDIR /files
-RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211025/vpnkit-tap-vsockd && \
-    wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211025/vpnkit.exe && \
-    wget https://raw.githubusercontent.com/sakai135/vpnkit/v0.5.0-20211025/LICENSE && \
+RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd && \
+    wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe && \
+    wget https://raw.githubusercontent.com/sakai135/vpnkit/v0.5.0-20211026/LICENSE && \
     chmod +x vpnkit-tap-vsockd && \
     find . -type f -exec sha256sum {} \;
 
