@@ -7,6 +7,8 @@ SOCKET_PATH="/var/run/wsl-vpnkit.sock"
 PIPE_PATH="//./pipe/wsl-vpnkit"
 TAP_PID_PATH="/var/run/vpnkit-tap-vsockd.pid"
 
+VPNKIT_STORE="/files/vpnkit/vpnkit.exe"
+NPIPERELAY_STORE="/files/npiperelay/npiperelay.exe"
 VPNKIT_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
 NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
 TAP_NAME="eth1"
@@ -44,17 +46,26 @@ install_file () {
                 echo "updated $1 at $3"
             fi
         fi
+        if [ ! -f "$2-ln" ]; then
+            ln -s "$3" "$2-ln"
+            echo "created symbolic link at $2-ln"
+        fi
     fi
 }
 
 install () {
-    install_file vpnkit.exe /files/vpnkit/vpnkit.exe "$VPNKIT_PATH"
-    install_file npiperelay.exe /files/npiperelay/npiperelay.exe "$NPIPERELAY_PATH"
+    install_file vpnkit.exe "$VPNKIT_STORE" "$VPNKIT_PATH"
+    install_file npiperelay.exe "$NPIPERELAY_STORE" "$NPIPERELAY_PATH"
 }
 
 relay () {
     echo "starting socat-npiperelay..."
-    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$NPIPERELAY_PATH -ep -s $PIPE_PATH",nofork
+    NPIPERELAY_SOCAT_PATH="$NPIPERELAY_PATH"
+    if [ -f "$NPIPERELAY_STORE-ln" ]; then
+        NPIPERELAY_SOCAT_PATH="$NPIPERELAY_STORE-ln"
+        echo "using $NPIPERELAY_SOCAT_PATH for npiperelay.exe"
+    fi
+    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$NPIPERELAY_SOCAT_PATH -ep -s $PIPE_PATH",nofork
 }
 
 relay_wait () {
