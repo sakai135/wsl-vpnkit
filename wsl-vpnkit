@@ -1,7 +1,7 @@
 #!/bin/sh
 
 POWERSHELL="$(command -v powershell.exe || echo '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe')"
-USERPROFILE=$(wslpath "$($POWERSHELL -c 'Write-Host -NoNewline $env:USERPROFILE')")
+USERPROFILE=$(wslpath "$($POWERSHELL -NoLogo -NoProfile -c 'Write-Host -NoNewline $env:USERPROFILE')")
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
 SOCKET_PATH="/var/run/wsl-vpnkit.sock"
 PIPE_PATH="//./pipe/wsl-vpnkit"
@@ -11,23 +11,32 @@ VPNKIT_STORE="/files/vpnkit/vpnkit.exe"
 NPIPERELAY_STORE="/files/npiperelay/npiperelay.exe"
 VPNKIT_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
 NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
-TAP_NAME="eth1"
-VPNKIT_GATEWAY_IP="192.168.67.1"
-VPNKIT_HOST_IP="192.168.67.2"
-VPNKIT_LOWEST_IP="192.168.67.3"
-VPNKIT_HIGHEST_IP="192.168.67.14"
-VPNKIT_WSL2_IP="$VPNKIT_LOWEST_IP"
-VPNKIT_DEBUG=
-WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-CHECK_HOST=example.com
-DNS_IP="$VPNKIT_GATEWAY_IP"
-CHECK_DNS=1.1.1.1
 
 echo "starting wsl-vpnkit"
-if [ -f "$CONF_PATH" ]; then
-    . "$CONF_PATH"
-    echo "loaded $CONF_PATH"
+
+mkdir -p "$USERPROFILE/wsl-vpnkit/"
+if [ -f /app/defaults.conf ]; then
+  if [ ! -f "$CONF_PATH" ]; then
+    cp /app/defaults.conf "$CONF_PATH"
+  fi
+  . /app/defaults.conf
+  . "$CONF_PATH"
+echo "loaded config: $CONF_PATH"
 fi
+
+# Failsafe configuration to run as a standalone script
+TAP_NAME=${TAP_NAME:-eth1}
+VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.67.1}
+VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.67.2}
+VPNKIT_LOWEST_IP=${VPNKIT_LOWEST_IP:-192.168.67.3}
+VPNKIT_HIGHEST_IP=${VPNKIT_HIGHEST_IP:-192.168.67.14}
+VPNKIT_DEBUG=${VPNKIT_DEBUG:-}
+CHECK_DNS=${CHECK_DNS:-1.1.1.1}
+CHECK_HOST=${CHECK_HOST:-example.com}
+
+VPNKIT_WSL2_IP="$VPNKIT_LOWEST_IP"
+WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
+DNS_IP="$VPNKIT_GATEWAY_IP"
 
 hash () {
     md5sum "$1" | awk '{ print $1 }'
