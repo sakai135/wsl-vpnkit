@@ -14,14 +14,11 @@ NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
 
 echo "starting wsl-vpnkit"
 
-mkdir -p "$USERPROFILE/wsl-vpnkit/"
-if [ -f /app/defaults.conf ]; then
-  if [ ! -f "$CONF_PATH" ]; then
-    cp /app/defaults.conf "$CONF_PATH"
-  fi
-  . /app/defaults.conf
+# Load defaults and user config if needed
+. /app/defaults.conf
+if [ -f "$CONF_PATH" ]; then
   . "$CONF_PATH"
-echo "loaded config: $CONF_PATH"
+  echo "loaded config: $CONF_PATH"
 fi
 
 # Failsafe configuration to run as a standalone script
