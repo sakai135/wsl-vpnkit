@@ -14,8 +14,11 @@ NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
 
 echo "starting wsl-vpnkit"
 
-# Load defaults and user config if needed
-. /app/defaults.conf
+# Load defaults
+if [ -f "/app/defaults.conf" ]; then
+  . /app/defaults.conf
+fi
+#  Load user config if needed
 if [ -f "$CONF_PATH" ]; then
   . "$CONF_PATH"
   echo "loaded config: $CONF_PATH"
