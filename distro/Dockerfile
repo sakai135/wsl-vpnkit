@@ -1,4 +1,4 @@
-FROM alpine:3.14.2 AS vpnkit
+FROM alpine:3.15.0 AS vpnkit
 RUN apk add --no-cache p7zip && \
     apk list --installed
 WORKDIR /files
@@ -8,7 +8,7 @@ RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vp
     chmod +x vpnkit-tap-vsockd && \
     find . -type f -exec sha256sum {} \;
 
-FROM golang:1.17.1-alpine3.14 AS npiperelay
+FROM golang:1.17.4-alpine3.15 AS npiperelay
 RUN apk add --no-cache git && \
     apk list --installed
 WORKDIR /app
@@ -20,7 +20,7 @@ RUN mkdir /files && \
     cd /files && \
     find . -type f -exec sha256sum {} \;
 
-FROM alpine:3.14.2
+FROM alpine:3.15.0
 RUN apk add --no-cache socat openrc iptables && \
     apk list --installed
 ARG REF=https://example.com/
