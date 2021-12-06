@@ -1,7 +1,7 @@
 #! /bin/sh
 
 LOG_PATH="/var/log/wsl-vpnkit.log"
-USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
+USERPROFILE=$(wslpath "$(powershell.exe -NoLogo -NoProfile -c 'Write-Host -NoNewline $env:USERPROFILE')")
 VERSION="$(cat /app/version)"
 
 touch $LOG_PATH
@@ -24,10 +24,13 @@ Logs for wsl-vpnkit can be viewed here.
 
     wsl.exe -d $WSL_DISTRO_NAME tail -f $LOG_PATH
 
-Config for wsl-vpnkit can be edited here. See the wsl-vpnkit script for possible values.
+Config for wsl-vpnkit can be edited here.
 
     $USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf
-    wsl.exe -d $WSL_DISTRO_NAME cat /usr/sbin/wsl-vpnkit
+
+Run the following command to see the default values.
+
+    wsl.exe -d $WSL_DISTRO_NAME cat /app/defaults.conf
 
 Press [enter] key to continue...
 "
