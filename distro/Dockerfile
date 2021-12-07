@@ -21,7 +21,7 @@ RUN mkdir /files && \
     find . -type f -exec sha256sum {} \;
 
 FROM alpine:3.15.0
-RUN apk add --no-cache socat openrc iptables && \
+RUN apk add --no-cache socat openrc iptables file && \
     apk list --installed
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0

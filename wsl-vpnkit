@@ -3,6 +3,7 @@
 POWERSHELL="$(command -v powershell.exe || echo '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe')"
 USERPROFILE=$(wslpath "$($POWERSHELL -NoLogo -NoProfile -c 'Write-Host -NoNewline $env:USERPROFILE')")
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
+HTTP_PROXY_CONFIG_PATH="$USERPROFILE/wsl-vpnkit/http-proxy.json"
 SOCKET_PATH="/var/run/wsl-vpnkit.sock"
 PIPE_PATH="//./pipe/wsl-vpnkit"
 TAP_PID_PATH="/var/run/vpnkit-tap-vsockd.pid"
@@ -97,6 +98,9 @@ vpnkit () {
     '
     if [ "$VPNKIT_DEBUG" ]; then
         CMD="$CMD"' --debug'
+    fi
+    if [ "$HTTP_PROXY_CONFIG_PATH" ] && [ "$(file -bLkr --mime-type "$HTTP_PROXY_CONFIG_PATH")" = 'application/json' ]; then
+        CMD="$CMD"' --http "$(wslpath -m ${HTTP_PROXY_CONFIG_PATH})"'
     fi
     eval "$CMD"
 }
