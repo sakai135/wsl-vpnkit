@@ -1,7 +1,7 @@
 #!/bin/sh
 
-POWERSHELL="$(command -v powershell.exe || echo '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe')"
-USERPROFILE=$(wslpath "$($POWERSHELL -NoLogo -NoProfile -c 'Write-Host -NoNewline $env:USERPROFILE')")
+CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
+USERPROFILE=$(wslpath "$($CMDSHELL /V:OFF /C 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
 SOCKET_PATH="/var/run/wsl-vpnkit.sock"
 PIPE_PATH="//./pipe/wsl-vpnkit"
@@ -181,7 +181,7 @@ cleanup () {
         echo "stopped vpnkit-tap-vsockd"
     fi
 
-    $POWERSHELL -c 'Stop-Process -Force -Name wsl-vpnkit -ErrorAction SilentlyContinue'
+    $CMDSHELL /V:OFF /C 'taskkill /F /T /IM wsl-vpnkit.exe' 2>/dev/null || :
 }
 
 close () {
