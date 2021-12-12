@@ -99,7 +99,7 @@ vpnkit () {
     if [ "$VPNKIT_DEBUG" ]; then
         CMD="$CMD"' --debug'
     fi
-    if [ "$HTTP_PROXY_CONFIG_PATH" ] && [ "$(file -bLkr --mime-type "$HTTP_PROXY_CONFIG_PATH")" = 'application/json' ]; then
+    if [ "$HTTP_PROXY_CONFIG_PATH" ]; then
         CMD="$CMD"' --http "$(wslpath -m ${HTTP_PROXY_CONFIG_PATH})"'
     fi
     eval "$CMD"
