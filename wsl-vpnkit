@@ -101,8 +101,10 @@ vpnkit () {
     if [ "$VPNKIT_DEBUG" ]; then
         CMD="$CMD"' --debug'
     fi
-    if [ "$HTTP_PROXY_CONFIG_PATH" ]; then
-        CMD="$CMD"' --http "$(wslpath -m ${HTTP_PROXY_CONFIG_PATH})"'
+    if [ -f "$HTTP_PROXY_CONFIG_PATH" ]; then
+        WIN_HTTP_PROXY_CONFIG_PATH=$(wslpath -m "$HTTP_PROXY_CONFIG_PATH")
+        echo "using $WIN_HTTP_PROXY_CONFIG_PATH"
+        CMD="$CMD"' --http "$WIN_HTTP_PROXY_CONFIG_PATH"'
     fi
     eval "$CMD"
 }
