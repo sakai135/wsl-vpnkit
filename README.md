@@ -11,7 +11,7 @@ Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https:/
 ```pwsh
 # PowerShell
 
-wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
+wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz --version 2
 wsl -d wsl-vpnkit
 ```
 
