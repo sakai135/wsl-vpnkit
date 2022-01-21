@@ -1,8 +1,8 @@
 # wsl-vpnkit
 
-The `wsl-vpnkit` script uses [VPNKit](https://github.com/moby/vpnkit) and [npiperelay](https://github.com/jstarks/npiperelay) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
+The `wsl-vpnkit` script uses [VPNKit](https://github.com/moby/vpnkit) and [PuTTY](https://www.chiark.greenend.org.uk/~sgtatham/putty/) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
-The releases bundle the script together with VPNKit and npiperelay in an [Alpine](https://alpinelinux.org/) distro.
+The releases bundle the script together with VPNKit and PuTTY in an [Alpine](https://alpinelinux.org/) distro.
 
 ## Setup
 
@@ -68,8 +68,8 @@ The `wsl-vpnkit` script can be used as a normal script in your existing distro. 
 USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
 mkdir -p "$USERPROFILE/wsl-vpnkit"
 
-# install socat and 7z; p7zip-full can be removed after install
-sudo apt install p7zip-full socat
+# install socat
+sudo apt install socat
 
 # download VPNKit binaries
 wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd
@@ -79,11 +79,9 @@ chmod +x vpnkit-tap-vsockd
 sudo chown root:root vpnkit-tap-vsockd
 sudo mv vpnkit-tap-vsockd /usr/local/sbin/vpnkit-tap-vsockd
 
-# download npiperelay
-wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip
-7z e npiperelay_windows_amd64.zip npiperelay.exe
-rm npiperelay_windows_amd64.zip
-mv npiperelay.exe "$USERPROFILE/wsl-vpnkit/"
+# download plink
+wget https://the.earth.li/~sgtatham/putty/0.76/w64/plink.exe
+mv plink.exe "$USERPROFILE/wsl-vpnkit/"
 
 # download the wsl-vpnkit script to current directory
 wget https://raw.githubusercontent.com/sakai135/wsl-vpnkit/main/wsl-vpnkit

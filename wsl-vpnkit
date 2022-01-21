@@ -9,9 +9,9 @@ PIPE_PATH="//./pipe/wsl-vpnkit"
 TAP_PID_PATH="/var/run/vpnkit-tap-vsockd.pid"
 
 VPNKIT_STORE="/files/vpnkit/vpnkit.exe"
-NPIPERELAY_STORE="/files/npiperelay/npiperelay.exe"
+PLINK_STORE="/files/putty/plink.exe"
 VPNKIT_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
-NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
+PLINK_PATH="$USERPROFILE/wsl-vpnkit/plink.exe"
 
 echo "starting wsl-vpnkit"
 
@@ -66,17 +66,17 @@ install_file () {
 
 install () {
     install_file vpnkit.exe "$VPNKIT_STORE" "$VPNKIT_PATH"
-    install_file npiperelay.exe "$NPIPERELAY_STORE" "$NPIPERELAY_PATH"
+    install_file plink.exe "$PLINK_STORE" "$PLINK_PATH"
 }
 
 relay () {
-    echo "starting socat-npiperelay..."
-    NPIPERELAY_SOCAT_PATH="$NPIPERELAY_PATH"
-    if [ -f "$NPIPERELAY_STORE-ln" ]; then
-        NPIPERELAY_SOCAT_PATH="$NPIPERELAY_STORE-ln"
-        echo "using $NPIPERELAY_SOCAT_PATH for npiperelay.exe"
+    echo "starting socat-plink..."
+    PLINK_SOCAT_PATH="$PLINK_PATH"
+    if [ -f "$PLINK_STORE-ln" ]; then
+        PLINK_SOCAT_PATH="$PLINK_STORE-ln"
+        echo "using $PLINK_SOCAT_PATH for plink.exe"
     fi
-    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$NPIPERELAY_SOCAT_PATH -ep -s $PIPE_PATH",nofork
+    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$PLINK_SOCAT_PATH -serial $PIPE_PATH",nofork
 }
 
 relay_wait () {
