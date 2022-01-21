@@ -1,6 +1,4 @@
 FROM alpine:3.15.0 AS vpnkit
-RUN apk add --no-cache p7zip && \
-    apk list --installed
 WORKDIR /files
 RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd && \
     wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe && \
@@ -8,16 +6,13 @@ RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vp
     chmod +x vpnkit-tap-vsockd && \
     find . -type f -exec sha256sum {} \;
 
-FROM golang:1.17.4-alpine3.15 AS npiperelay
-RUN apk add --no-cache git && \
+FROM alpine:3.15.0 AS npiperelay
+RUN apk add --no-cache p7zip && \
     apk list --installed
-WORKDIR /app
-RUN mkdir /files && \
-    git -c advice.detachedHead=false clone --branch v0.1.0 --depth 1 https://github.com/jstarks/npiperelay.git . && \
-    [[ "4997d3bf5f2e512608b39b51f37412206758051b" = "$(git rev-parse --verify HEAD)" ]] && \
-    GOOS=windows go build -ldflags '-s -w' -o /files/npiperelay.exe . && \
-    cp ./LICENSE /files/ && \
-    cd /files && \
+WORKDIR /files
+RUN wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip && \
+    7z e npiperelay_windows_amd64.zip npiperelay.exe LICENSE && \
+    rm npiperelay_windows_amd64.zip && \
     find . -type f -exec sha256sum {} \;
 
 FROM alpine:3.15.0
