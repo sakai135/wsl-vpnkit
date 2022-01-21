@@ -64,11 +64,14 @@ cd wsl-vpnkit/
 The `wsl-vpnkit` script can be used as a normal script in your existing distro. This is an example setup script for Ubuntu.
 
 ```sh
+# create the directory to place Windows executables
 USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
 mkdir -p "$USERPROFILE/wsl-vpnkit"
 
+# install socat and 7z; p7zip-full can be removed after install
 sudo apt install p7zip-full socat
 
+# download VPNKit binaries
 wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd
 wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe
 mv vpnkit.exe "$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
@@ -76,11 +79,17 @@ chmod +x vpnkit-tap-vsockd
 sudo chown root:root vpnkit-tap-vsockd
 sudo mv vpnkit-tap-vsockd /usr/local/sbin/vpnkit-tap-vsockd
 
+# download npiperelay
 wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip
 7z e npiperelay_windows_amd64.zip npiperelay.exe
 rm npiperelay_windows_amd64.zip
 mv npiperelay.exe "$USERPROFILE/wsl-vpnkit/"
 
+# download the wsl-vpnkit script to current directory
+wget https://raw.githubusercontent.com/sakai135/wsl-vpnkit/main/wsl-vpnkit
+chmod +x wsl-vpnkit
+
+# run the wsl-vpnkit script
 sudo ./wsl-vpnkit
 ```
 
