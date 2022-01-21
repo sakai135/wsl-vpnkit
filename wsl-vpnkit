@@ -32,6 +32,7 @@ VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.67.2}
 VPNKIT_LOWEST_IP=${VPNKIT_LOWEST_IP:-192.168.67.3}
 VPNKIT_HIGHEST_IP=${VPNKIT_HIGHEST_IP:-192.168.67.14}
 VPNKIT_DEBUG=${VPNKIT_DEBUG:-}
+VPNKIT_PORT_MAX_IDLE=${VPNKIT_PORT_MAX_IDLE:-300}
 CHECK_DNS=${CHECK_DNS:-1.1.1.1}
 CHECK_HOST=${CHECK_HOST:-example.com}
 
@@ -95,6 +96,7 @@ vpnkit () {
         --host-ip $VPNKIT_HOST_IP \
         --lowest-ip $VPNKIT_LOWEST_IP \
         --highest-ip $VPNKIT_HIGHEST_IP \
+        --port-max-idle-time $VPNKIT_PORT_MAX_IDLE \
     '
     if [ "$VPNKIT_DEBUG" ]; then
         CMD="$CMD"' --debug'
