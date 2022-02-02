@@ -8,8 +8,8 @@ RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vp
 
 FROM alpine:3.15.0 AS pipecat
 WORKDIR /files
-RUN wget https://github.com/sakai135/pipecat/releases/download/v0.0.1/pipecat.exe && \
-    wget https://raw.githubusercontent.com/sakai135/pipecat/v0.0.1/LICENSE && \
+RUN wget https://github.com/sakai135/pipecat/releases/download/v0.0.2/pipecat.exe && \
+    wget https://raw.githubusercontent.com/sakai135/pipecat/v0.0.2/LICENSE && \
     find . -type f -exec sha256sum {} \;
 
 FROM alpine:3.15.0
