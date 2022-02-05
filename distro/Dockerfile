@@ -1,31 +1,32 @@
-FROM alpine:3.15.0 AS vpnkit
-WORKDIR /files
-RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd && \
-    wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe && \
-    wget https://raw.githubusercontent.com/sakai135/vpnkit/v0.5.0-20211026/LICENSE && \
-    chmod +x vpnkit-tap-vsockd && \
-    find . -type f -exec sha256sum {} \;
+FROM golang:1.17.6-alpine as build
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN GOOS=windows go build -ldflags '-s -w -H=windowsgui' -o bin/wsl-gvproxy.exe ./cmd/gvproxy && \
+    GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm
 
-FROM alpine:3.15.0 AS npiperelay
-RUN apk add --no-cache p7zip && \
-    apk list --installed
-WORKDIR /files
-RUN wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip && \
-    7z e npiperelay_windows_amd64.zip npiperelay.exe LICENSE && \
-    rm npiperelay_windows_amd64.zip && \
-    find . -type f -exec sha256sum {} \;
+FROM golang:1.17.6-alpine as licenses
+RUN apk add --no-cache git && \
+    apk list --installed && \
+    go install github.com/google/go-licenses@v1.0.0
+WORKDIR /app
+COPY . .
+RUN go-licenses save ./cmd/gvproxy --save_path ./licenses/gvproxy && \
+    go-licenses save ./cmd/vm --save_path ./licenses/vm
 
 FROM alpine:3.15.0
-RUN apk add --no-cache socat openrc iptables && \
+RUN apk add --no-cache openrc iptables && \
     apk list --installed
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0
 WORKDIR /app
-COPY --from=npiperelay /files /files/npiperelay
-COPY --from=vpnkit /files /files/vpnkit
+COPY --from=build /app/bin /files/
+COPY --from=licenses /app/licenses/gvproxy /app/licenses/vm /licenses/
 COPY ./distro/scripts/ ./wsl-vpnkit ./LICENSE ./
 RUN echo "$REF" > /app/ref && \
     echo "$VERSION" > /app/version && \
-    ln -s /files/vpnkit/vpnkit-tap-vsockd /app/wsl-vpnkit /usr/sbin/ && \
+    find /files -type f -exec sha256sum {} \; && \
+    ln -s /files/wsl-vm /app/wsl-vpnkit /usr/sbin/ && \
     ln -s /app/wsl-vpnkit.service /etc/init.d/wsl-vpnkit && \
     ln -s /app/startup.sh /etc/profile.d/

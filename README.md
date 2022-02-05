@@ -1,8 +1,8 @@
 # wsl-vpnkit
 
-The `wsl-vpnkit` script uses [VPNKit](https://github.com/moby/vpnkit) and [npiperelay](https://github.com/jstarks/npiperelay) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
+The `wsl-vpnkit` script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
-The releases bundle the script together with VPNKit and npiperelay in an [Alpine](https://alpinelinux.org/) distro.
+The releases bundle the script together with modified gvisor-tap-vsock binaries in an [Alpine](https://alpinelinux.org/) distro.
 
 ## Setup
 
@@ -24,7 +24,7 @@ wsl.exe -d wsl-vpnkit service wsl-vpnkit start
 ### Notes
 
 * Ports on the WSL 2 VM are accessible from the Windows host using `localhost`.
-* Ports on the Windows host are accessible from WSL 2 using `host.internal`, `192.168.67.2`, or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
+* Ports on the Windows host are accessible from WSL 2 using `host.internal` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
 
 ### Update
 
@@ -68,22 +68,13 @@ The `wsl-vpnkit` script can be used as a normal script in your existing distro. 
 USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
 mkdir -p "$USERPROFILE/wsl-vpnkit"
 
-# install socat and 7z; p7zip-full can be removed after install
-sudo apt install p7zip-full socat
-
-# download VPNKit binaries
+# download binaries
 wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd
 wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe
-mv vpnkit.exe "$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
-chmod +x vpnkit-tap-vsockd
-sudo chown root:root vpnkit-tap-vsockd
-sudo mv vpnkit-tap-vsockd /usr/local/sbin/vpnkit-tap-vsockd
-
-# download npiperelay
-wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperelay_windows_amd64.zip
-7z e npiperelay_windows_amd64.zip npiperelay.exe
-rm npiperelay_windows_amd64.zip
-mv npiperelay.exe "$USERPROFILE/wsl-vpnkit/"
+mv wsl-gvproxy.exe "$USERPROFILE/wsl-vpnkit/wsl-gvproxy.exe"
+chmod +x wsl-vm
+sudo chown root:root wsl-vm
+sudo mv wsl-vm /usr/local/sbin/wsl-vm
 
 # download the wsl-vpnkit script to current directory
 wget https://raw.githubusercontent.com/sakai135/wsl-vpnkit/main/wsl-vpnkit
@@ -105,5 +96,5 @@ If VS Code takes a long time to open your folder in WSL, [enable the setting "Co
 # PowerShell
 
 wsl --shutdown
-kill -Name wsl-vpnkit
+kill -Name wsl-gvproxy
 ```
