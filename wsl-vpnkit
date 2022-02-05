@@ -2,64 +2,94 @@
 
 CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
 USERPROFILE=$(wslpath "$($CMDSHELL /V:OFF /C 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
-GVPROXY_STORE="/files/wsl-gvproxy.exe"
-GVPROXY_PATH="$USERPROFILE/wsl-vpnkit/wsl-gvproxy.exe"
+CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
+WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
+WSL2_TAP_NAME=eth0
+WIN_STORE="/files"
+WIN_PATH="$USERPROFILE/wsl-vpnkit"
 
 echo "starting wsl-vpnkit"
 
+# Load defaults
+if [ -f "/app/defaults.conf" ]; then
+  . /app/defaults.conf
+fi
+#  Load user config if needed
+if [ -f "$CONF_PATH" ]; then
+  . "$CONF_PATH"
+  echo "loaded config: $CONF_PATH"
+fi
+
 # Failsafe configuration to run as a standalone script
-TAP_NAME=${TAP_NAME:-tap0}
-VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.127.1}
-VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.127.254}
-VPNKIT_WSL2_IP=${VPNKIT_LOWEST_IP:-192.168.127.2}
-VPNKIT_DEBUG=${VPNKIT_DEBUG:-}
+GVPROXY_PATH=${GVPROXY_PATH:-/mnt/c/bin/wsl-gvproxy.exe}
+TAP_NAME=${TAP_NAME:-eth1}
+VPNKIT_SUBNET=${VPNKIT_SUBNET:-192.168.67.0/24}
+VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.67.1}
+VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.67.2}
+VPNKIT_LOWEST_IP=${VPNKIT_LOWEST_IP:-192.168.67.3}
+DNS_IP=${DNS_IP:-192.168.67.1}
+VPNKIT_DEBUG=${VPNKIT_DEBUG:-false}
 CHECK_DNS=${CHECK_DNS:-1.1.1.1}
 CHECK_HOST=${CHECK_HOST:-example.com}
-
-WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-DNS_IP="$VPNKIT_GATEWAY_IP"
 
 hash () {
     md5sum "$1" | awk '{ print $1 }'
 }
 
 install_file () {
-    if [ -f $2 ]; then
-        if [ ! -f "$3" ]; then
-            mkdir -p "$(dirname $3)"
-            cp $2 "$3"
-            echo "copied $1 to $3"
+    FILE_STORE="$WIN_STORE/$1"
+    FILE_PATH="$WIN_PATH/$1"
+    if [ -f $FILE_STORE ]; then
+        if [ ! -f "$FILE_PATH" ]; then
+            mkdir -p "$(dirname $FILE_PATH)"
+            cp $FILE_STORE "$FILE_PATH"
+            echo "copied $1 to $FILE_PATH"
         else
-            echo "$1 exists at $3"
-            if [ `hash $2` != `hash "$3"` ]; then
-                cp -f $2 "$3"
-                echo "updated $1 at $3"
+            echo "$1 exists at $FILE_PATH"
+            if [ `hash $FILE_STORE` != `hash "$FILE_PATH"` ]; then
+                cp -f $FILE_STORE "$FILE_PATH"
+                echo "updated $1 at $FILE_PATH"
             fi
         fi
     fi
 }
 
 install () {
-    install_file wsl-gvproxy.exe "$GVPROXY_STORE" "$GVPROXY_PATH"
+    install_file wsl-gvproxy.exe
+    if [ ! -f $GVPROXY_PATH ]; then
+        GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
+    fi
+    if [ ! -f $GVPROXY_PATH ]; then
+        echo "gvproxy not found"
+        exit 1
+    fi
 }
 
 run () {
-    echo "starting gvproxy..."
-    wsl-vm -path "$GVPROXY_PATH" &
+    echo "starting gvproxy at $GVPROXY_PATH..."
+    wsl-vm \
+        -path "$GVPROXY_PATH" \
+        -iface "$TAP_NAME" \
+        -subnet "$VPNKIT_SUBNET" \
+        -gateway-ip "$VPNKIT_GATEWAY_IP" \
+        -host-ip "$VPNKIT_HOST_IP" \
+        -vm-ip "$VPNKIT_LOWEST_IP" \
+        -debug="$VPNKIT_DEBUG" &
     echo "started gvproxy"
 }
 
 tap_wait () {
-    while [ ! -e "/sys/class/net/$TAP_NAME" ]; do
-        sleep 0.1
+    echo "waiting for network connectivity..."
+    for i in {1..5}; do 
+        ping -c 1 -W 1 $VPNKIT_GATEWAY_IP &> /dev/null && break
     done
-    sleep 0.1
+    echo "network connected"
 }
 
 ipconfig () {
-    echo "configuring ip..."
-    ip route | grep -e "$VPNKIT_GATEWAY_IP" -e 'default' | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
-    echo "ip config done"
+    echo "removing WSL 2 ip route..."
+    ip route | grep -e "$WSL2_GATEWAY_IP" | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
+    echo "removed WSL 2 ip route"
 
     echo "adding rules to iptables..."
     iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
@@ -115,9 +145,9 @@ cleanup () {
     iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
     echo "iptables cleanup done"
 
-    echo "cleaning up ip..."
-    ip route add default via $WSL2_GATEWAY_IP dev eth0
-    echo "ip cleanup done"
+    echo "restoring WSL 2 ip route..."
+    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME
+    echo "restored WSL 2 ip route"
 }
 
 close () {

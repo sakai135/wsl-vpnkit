@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -23,9 +24,18 @@ import (
 var (
 	endpoint string
 	iface    string
-	mac      string
 	debug    bool
 	mtu      int
+
+	subnet    string
+	gatewayIP string
+	hostIP    string
+	vmIP      string
+	proxyMtu  int
+)
+
+const (
+	mac = "5a:94:ef:e4:0c:ee"
 )
 
 func main() {
@@ -33,9 +43,15 @@ func main() {
 
 	flag.StringVar(&endpoint, "path", "gvproxy.exe", "path to gvproxy.exe")
 	flag.StringVar(&iface, "iface", "tap0", "tap interface name")
-	flag.StringVar(&mac, "mac", "5a:94:ef:e4:0c:ee", "mac address")
 	flag.BoolVar(&debug, "debug", false, "debug")
 	flag.IntVar(&mtu, "mtu", 4000, "mtu")
+
+	flag.StringVar(&subnet, "subnet", "192.168.127.0/24", "Set the subnet")
+	flag.StringVar(&gatewayIP, "gateway-ip", "192.168.127.1", "Set the IP for the gateway")
+	flag.StringVar(&hostIP, "host-ip", "192.168.127.254", "Set the IP for accessing the host from the WSL 2 VM")
+	flag.StringVar(&vmIP, "vm-ip", "192.168.127.2", "Set the IP for the WSL 2 VM")
+	flag.IntVar(&proxyMtu, "proxy-mtu", 1500, "Set the MTU for the proxy")
+
 	flag.Parse()
 
 	links, err := netlink.LinkList()
@@ -53,8 +69,23 @@ func main() {
 	}
 }
 
+func parseProxyOptions() []string {
+	options := []string{
+		"-subnet", subnet,
+		"-gateway-ip", gatewayIP,
+		"-host-ip", hostIP,
+		"-vm-ip", vmIP,
+		"-mtu", strconv.Itoa(proxyMtu),
+	}
+	if debug {
+		options = append(options, "-debug")
+	}
+	return options
+}
+
 func run() error {
-	conn, err := transport.Dial(endpoint)
+	proxyArgs := parseProxyOptions()
+	conn, err := transport.Dial(endpoint, proxyArgs[:]...)
 	if err != nil {
 		return errors.Wrap(err, "cannot connect to host")
 	}

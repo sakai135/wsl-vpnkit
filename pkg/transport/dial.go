@@ -1,10 +1,10 @@
 package transport
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 )
 
 func Dial(endpoint string, args ...string) (net.Conn, error) {
@@ -26,8 +26,8 @@ func Dial(endpoint string, args ...string) (net.Conn, error) {
 		return nil, err
 	}
 
-	local := IoAddr{path: fmt.Sprint(os.Getpid())}
-	remote := IoAddr{path: fmt.Sprint(cmd.Process.Pid)}
+	local := IoAddr{path: strconv.Itoa(os.Getpid())}
+	remote := IoAddr{path: strconv.Itoa(cmd.Process.Pid)}
 	conn := IoConn{
 		reader: stdout,
 		writer: stdin,
@@ -39,7 +39,7 @@ func Dial(endpoint string, args ...string) (net.Conn, error) {
 }
 
 func GetStdioConn() net.Conn {
-	local := IoAddr{path: fmt.Sprint(os.Getpid())}
+	local := IoAddr{path: strconv.Itoa(os.Getpid())}
 	remote := IoAddr{path: "remote"}
 	conn := IoConn{
 		writer: os.Stdout,

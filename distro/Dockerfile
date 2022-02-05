@@ -2,7 +2,8 @@ FROM golang:1.17.6-alpine as build
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
-COPY . .
+COPY cmd ./cmd
+COPY pkg ./pkg
 RUN GOOS=windows go build -ldflags '-s -w -H=windowsgui' -o bin/wsl-gvproxy.exe ./cmd/gvproxy && \
     GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm
 
@@ -11,7 +12,9 @@ RUN apk add --no-cache git && \
     apk list --installed && \
     go install github.com/google/go-licenses@v1.0.0
 WORKDIR /app
-COPY . .
+COPY go.mod go.sum LICENSE ./
+COPY cmd ./cmd
+COPY pkg ./pkg
 RUN go-licenses save ./cmd/gvproxy --save_path ./licenses/gvproxy && \
     go-licenses save ./cmd/vm --save_path ./licenses/vm
 

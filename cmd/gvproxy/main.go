@@ -16,13 +16,20 @@ import (
 )
 
 var (
-	debug    bool
-	mtu      int
+	debug bool
+	mtu   int
+
 	exitCode int
+
+	subnet    string
+	gatewayIP string
+	hostIP    string
+	vmIP      string
 )
 
 const (
-	gatewayIP = "192.168.127.1"
+	gatewayMacAddress = "5a:94:ef:e4:0c:dd"
+	vmMacAddress      = "5a:94:ef:e4:0c:ee"
 )
 
 func main() {
@@ -30,6 +37,12 @@ func main() {
 
 	flag.BoolVar(&debug, "debug", false, "Print debug info")
 	flag.IntVar(&mtu, "mtu", 1500, "Set the MTU")
+
+	flag.StringVar(&subnet, "subnet", "192.168.127.0/24", "Set the subnet")
+	flag.StringVar(&gatewayIP, "gateway-ip", "192.168.127.1", "Set the IP for the gateway")
+	flag.StringVar(&hostIP, "host-ip", "192.168.127.254", "Set the IP for accessing the host from the WSL 2 VM")
+	flag.StringVar(&vmIP, "vm-ip", "192.168.127.2", "Set the IP for the WSL 2 VM")
+
 	flag.Parse()
 	ctx, cancel := context.WithCancel(context.Background())
 	// Make this the last defer statement in the stack
@@ -48,21 +61,21 @@ func main() {
 		Debug:             debug,
 		CaptureFile:       "",
 		MTU:               mtu,
-		Subnet:            "192.168.127.0/24",
+		Subnet:            subnet,
 		GatewayIP:         gatewayIP,
-		GatewayMacAddress: "5a:94:ef:e4:0c:dd",
+		GatewayMacAddress: gatewayMacAddress,
 		DHCPStaticLeases: map[string]string{
-			"192.168.127.2": "5a:94:ef:e4:0c:ee",
+			vmIP: vmMacAddress,
 		},
 		DNS:              []types.Zone{},
 		DNSSearchDomains: nil,
 		Forwards:         map[string]string{},
 		NAT: map[string]string{
-			"192.168.127.254": "127.0.0.1",
+			hostIP: "127.0.0.1",
 		},
-		GatewayVirtualIPs: []string{"192.168.127.254"},
+		GatewayVirtualIPs: []string{hostIP},
 		VpnKitUUIDMacAddresses: map[string]string{
-			"c3d68012-0208-11ea-9fd7-f2189899ab08": "5a:94:ef:e4:0c:ee",
+			"c3d68012-0208-11ea-9fd7-f2189899ab08": vmMacAddress,
 		},
 		Protocol: types.HyperKitProtocol,
 	}
