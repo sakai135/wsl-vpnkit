@@ -2,7 +2,7 @@
 
 The `wsl-vpnkit` script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
-The releases bundle the script together with modified gvisor-tap-vsock binaries in an [Alpine](https://alpinelinux.org/) distro.
+The releases bundle the script together with the binaries in an [Alpine](https://alpinelinux.org/) distro.
 
 ## Setup
 
@@ -34,7 +34,7 @@ To update, unregister the existing distro and import the new version.
 # PowerShell
 
 wsl --unregister wsl-vpnkit
-wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
+wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz --version 2
 ```
 
 ### Uninstall
@@ -64,23 +64,24 @@ cd wsl-vpnkit/
 The `wsl-vpnkit` script can be used as a normal script in your existing distro. This is an example setup script for Ubuntu.
 
 ```sh
-# create the directory to place Windows executables
+# download wsl-vpnkit
+VERSION=v0.3.x
+wget https://github.com/sakai135/wsl-vpnkit/releases/download/$VERSION/wsl-vpnkit.tar.gz
+tar --strip-components=1 -xf wsl-vpnkit.tar.gz app/wsl-vpnkit files/wsl-gvproxy.exe files/wsl-vm
+rm wsl-vpnkit.tar.gz
+
+# place Windows exe
 USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
 mkdir -p "$USERPROFILE/wsl-vpnkit"
-
-# download binaries
-wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd
-wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe
 mv wsl-gvproxy.exe "$USERPROFILE/wsl-vpnkit/wsl-gvproxy.exe"
+
+# place Linux bin
 chmod +x wsl-vm
 sudo chown root:root wsl-vm
 sudo mv wsl-vm /usr/local/sbin/wsl-vm
 
-# download the wsl-vpnkit script to current directory
-wget https://raw.githubusercontent.com/sakai135/wsl-vpnkit/main/wsl-vpnkit
-chmod +x wsl-vpnkit
-
 # run the wsl-vpnkit script
+chmod +x wsl-vpnkit
 sudo ./wsl-vpnkit
 ```
 

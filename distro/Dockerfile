@@ -5,7 +5,8 @@ RUN go mod download
 COPY cmd ./cmd
 COPY pkg ./pkg
 RUN GOOS=windows go build -ldflags '-s -w -H=windowsgui' -o bin/wsl-gvproxy.exe ./cmd/gvproxy && \
-    GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm
+    GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm && \
+    find ./bin -type f -exec sha256sum {} \;
 
 FROM golang:1.17.6-alpine as licenses
 RUN apk add --no-cache git && \

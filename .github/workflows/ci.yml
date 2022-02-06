@@ -24,13 +24,9 @@ jobs:
     - name: Package
       run: |
         CONTAINER_ID=$(docker create $TAG_NAME)
-        docker cp $CONTAINER_ID:/files/wsl-gvproxy.exe ./
-        docker cp $CONTAINER_ID:/files/wsl-vm ./
         docker export $CONTAINER_ID | gzip > wsl-vpnkit.tar.gz
         sha256sum wsl-vpnkit.tar.gz | tee wsl-vpnkit.tar.gz.sha256
-        sha256sum wsl-gvproxy.exe | tee wsl-gvproxy.exe.sha256
-        sha256sum wsl-vm | tee wsl-vm.sha256
-        ls -la wsl-vpnkit.tar.gz wsl-gvproxy.exe wsl-vm
+        ls -la wsl-vpnkit.tar.gz
     - name: Artifacts
       uses: actions/upload-artifact@v2
       with:
@@ -38,7 +34,3 @@ jobs:
         path: |
           wsl-vpnkit.tar.gz
           wsl-vpnkit.tar.gz.sha256
-          wsl-gvproxy.exe
-          wsl-gvproxy.exe.sha256
-          wsl-vm
-          wsl-vm.sha256
