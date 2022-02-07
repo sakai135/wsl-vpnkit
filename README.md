@@ -99,6 +99,12 @@ sudo ./wsl-vpnkit
 
 If VS Code takes a long time to open your folder in WSL, [enable the setting "Connect Through Localhost"](https://github.com/microsoft/vscode-docs/blob/main/remote-release-notes/v1_54.md#fix-for-wsl-2-connection-issues-when-behind-a-proxy).
 
+### Cannot connect to WSL 2 VM IP while connected to VPN
+
+This is due to the VPN blocking connections to the WSL 2 VM network interface. Ports on the WSL 2 VM are accessible from the Windows host using `localhost`.
+
+For this and other networking considerations when using WSL 2, see [Accessing network applications with WSL](https://docs.microsoft.com/en-us/windows/wsl/networking).
+
 ### Try shutting down WSL 2 VM to reset
 
 ```pwsh
