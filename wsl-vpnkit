@@ -3,15 +3,11 @@
 CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
 USERPROFILE=$(wslpath "$($CMDSHELL /V:OFF /C 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
-HTTP_PROXY_CONFIG_PATH="$USERPROFILE/wsl-vpnkit/http-proxy.json"
-SOCKET_PATH="/var/run/wsl-vpnkit.sock"
-PIPE_PATH="//./pipe/wsl-vpnkit"
-TAP_PID_PATH="/var/run/vpnkit-tap-vsockd.pid"
-
-VPNKIT_STORE="/files/vpnkit/vpnkit.exe"
-NPIPERELAY_STORE="/files/npiperelay/npiperelay.exe"
-VPNKIT_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe"
-NPIPERELAY_PATH="$USERPROFILE/wsl-vpnkit/npiperelay.exe"
+WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
+WSL2_VM_IP="$(ifconfig eth0 | awk '/inet /{print substr($2, 6)}')"
+WSL2_TAP_NAME=eth0
+WIN_STORE="/files"
+WIN_PATH="$USERPROFILE/wsl-vpnkit"
 
 echo "starting wsl-vpnkit"
 
@@ -26,102 +22,78 @@ if [ -f "$CONF_PATH" ]; then
 fi
 
 # Failsafe configuration to run as a standalone script
+GVPROXY_PATH=${GVPROXY_PATH:-/mnt/c/bin/wsl-gvproxy.exe}
 TAP_NAME=${TAP_NAME:-eth1}
+VPNKIT_SUBNET=${VPNKIT_SUBNET:-192.168.67.0/24}
 VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.67.1}
 VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.67.2}
 VPNKIT_LOWEST_IP=${VPNKIT_LOWEST_IP:-192.168.67.3}
-VPNKIT_HIGHEST_IP=${VPNKIT_HIGHEST_IP:-192.168.67.14}
-VPNKIT_DEBUG=${VPNKIT_DEBUG:-}
-VPNKIT_PORT_MAX_IDLE=${VPNKIT_PORT_MAX_IDLE:-300}
+DNS_IP=${DNS_IP:-192.168.67.1}
+VPNKIT_DEBUG=${VPNKIT_DEBUG:-false}
 CHECK_DNS=${CHECK_DNS:-1.1.1.1}
 CHECK_HOST=${CHECK_HOST:-example.com}
-
-VPNKIT_WSL2_IP="$VPNKIT_LOWEST_IP"
-WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-DNS_IP="$VPNKIT_GATEWAY_IP"
 
 hash () {
     md5sum "$1" | awk '{ print $1 }'
 }
 
 install_file () {
-    if [ -f $2 ]; then
-        if [ ! -f "$3" ]; then
-            mkdir -p "$(dirname $3)"
-            cp $2 "$3"
-            echo "copied $1 to $3"
+    FILE_STORE="$WIN_STORE/$1"
+    FILE_PATH="$WIN_PATH/$1"
+    if [ -f $FILE_STORE ]; then
+        if [ ! -f "$FILE_PATH" ]; then
+            mkdir -p "$(dirname $FILE_PATH)"
+            cp $FILE_STORE "$FILE_PATH"
+            echo "copied $1 to $FILE_PATH"
         else
-            echo "$1 exists at $3"
-            if [ `hash $2` != `hash "$3"` ]; then
-                cp -f $2 "$3"
-                echo "updated $1 at $3"
+            echo "$1 exists at $FILE_PATH"
+            if [ `hash $FILE_STORE` != `hash "$FILE_PATH"` ]; then
+                cp -f $FILE_STORE "$FILE_PATH"
+                echo "updated $1 at $FILE_PATH"
             fi
-        fi
-        if [ ! -f "$2-ln" ]; then
-            ln -s "$3" "$2-ln"
-            echo "created symbolic link at $2-ln"
         fi
     fi
 }
 
 install () {
-    install_file vpnkit.exe "$VPNKIT_STORE" "$VPNKIT_PATH"
-    install_file npiperelay.exe "$NPIPERELAY_STORE" "$NPIPERELAY_PATH"
-}
-
-relay () {
-    echo "starting socat-npiperelay..."
-    NPIPERELAY_SOCAT_PATH="$NPIPERELAY_PATH"
-    if [ -f "$NPIPERELAY_STORE-ln" ]; then
-        NPIPERELAY_SOCAT_PATH="$NPIPERELAY_STORE-ln"
-        echo "using $NPIPERELAY_SOCAT_PATH for npiperelay.exe"
+    install_file wsl-gvproxy.exe
+    if [ ! -f $GVPROXY_PATH ]; then
+        GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
     fi
-    socat UNIX-LISTEN:$SOCKET_PATH,fork,umask=007 EXEC:"$NPIPERELAY_SOCAT_PATH -ep -s $PIPE_PATH",nofork
+    if [ ! -f $GVPROXY_PATH ]; then
+        echo "gvproxy not found"
+        exit 1
+    fi
 }
 
-relay_wait () {
-    echo "waiting for $SOCKET_PATH ..."
-    while [ ! -S "$SOCKET_PATH" ]; do
+run () {
+    echo "starting gvproxy at $GVPROXY_PATH..."
+    wsl-vm \
+        -path "$GVPROXY_PATH" \
+        -iface "$TAP_NAME" \
+        -subnet "$VPNKIT_SUBNET" \
+        -gateway-ip "$VPNKIT_GATEWAY_IP" \
+        -host-ip "$VPNKIT_HOST_IP" \
+        -vm-ip "$VPNKIT_LOWEST_IP" \
+        -debug="$VPNKIT_DEBUG" &
+    echo "started gvproxy"
+}
+
+tap_wait () {
+    echo "waiting for dhcp..."
+    c=1
+    while [ "$c" -eq 1 ]; do
         sleep 0.1
+        ip route | grep "default via .* dev $TAP_NAME"
+        c=$?
     done
-    echo "found $SOCKET_PATH"
-}
-
-vpnkit () {
-    echo "starting vpnkit..."
-    WIN_PIPE_PATH=$(echo $PIPE_PATH | sed -e "s:/:\\\:g")
-    CMD='"$VPNKIT_PATH" \
-        --ethernet $WIN_PIPE_PATH \
-        --gateway-ip $VPNKIT_GATEWAY_IP \
-        --host-ip $VPNKIT_HOST_IP \
-        --lowest-ip $VPNKIT_LOWEST_IP \
-        --highest-ip $VPNKIT_HIGHEST_IP \
-        --port-max-idle-time $VPNKIT_PORT_MAX_IDLE \
-    '
-    if [ "$VPNKIT_DEBUG" ]; then
-        CMD="$CMD"' --debug'
-    fi
-    if [ -f "$HTTP_PROXY_CONFIG_PATH" ]; then
-        WIN_HTTP_PROXY_CONFIG_PATH=$(wslpath -m "$HTTP_PROXY_CONFIG_PATH")
-        echo "using $WIN_HTTP_PROXY_CONFIG_PATH"
-        CMD="$CMD"' --http "$WIN_HTTP_PROXY_CONFIG_PATH"'
-    fi
-    eval "$CMD"
-}
-
-tap () {
-    echo "starting vpnkit-tap-vsockd..."
-    vpnkit-tap-vsockd --tap $TAP_NAME --path $SOCKET_PATH --daemon --pid $TAP_PID_PATH
-    echo "started vpnkit-tap-vsockd"
+    echo "dhcp completed"
 }
 
 ipconfig () {
-    echo "configuring ip..."
-    ip a add $VPNKIT_WSL2_IP/255.255.255.0 dev $TAP_NAME
-    ip link set dev $TAP_NAME up
-    ip route | grep -e "$VPNKIT_GATEWAY_IP" -e 'default' | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
-    ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
-    echo "ip config done"
+    echo "removing WSL 2 ip route..."
+    ip route | grep -e "$WSL2_GATEWAY_IP" | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
+    echo "removed WSL 2 ip route"
 
     echo "adding rules to iptables..."
     iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
@@ -155,8 +127,8 @@ check_https () {
 
 check () {
     check_ping 4 'WSL 2 gateway / Windows host' $WSL2_GATEWAY_IP
-    check_ping 4 'VPNKit Windows host' $VPNKIT_HOST_IP
-    check_ping 4 'VPNKit gateway' $VPNKIT_GATEWAY_IP
+    check_ping 4 'Windows host' $VPNKIT_HOST_IP
+    check_ping 4 'gateway' $VPNKIT_GATEWAY_IP
     check_dns 4 $CHECK_HOST $DNS_IP
     check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
@@ -177,19 +149,10 @@ cleanup () {
     iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
     echo "iptables cleanup done"
 
-    echo "cleaning up ip..."
-    ip route | grep -e "$VPNKIT_GATEWAY_IP" -e 'default' | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
-    ip link set dev $TAP_NAME down
-    ip route add default via $WSL2_GATEWAY_IP dev eth0
-    echo "ip cleanup done"
-
-    if [ -f "$TAP_PID_PATH" ]; then
-        echo "stopping vpnkit-tap-vsockd"
-        kill -- -$(cat $TAP_PID_PATH)
-        echo "stopped vpnkit-tap-vsockd"
-    fi
-
-    $CMDSHELL /V:OFF /C 'taskkill /F /T /IM wsl-vpnkit.exe' 2>/dev/null || :
+    echo "restoring WSL 2 ip route..."
+    ip addr add $WSL2_VM_IP/255.255.255.0 dev $WSL2_TAP_NAME
+    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME
+    echo "restored WSL 2 ip route"
 }
 
 close () {
@@ -205,10 +168,8 @@ fi
 
 cleanup
 install
-relay &
-relay_wait
-vpnkit &
-tap
+run
+tap_wait
 ipconfig
 check
 trap close exit

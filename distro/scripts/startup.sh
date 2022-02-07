@@ -15,10 +15,9 @@ Run the following commands from Windows or other WSL 2 distros to use.
     wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit start
     wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit stop
 
-The following files will be copied if they do not already exist.
+The following file will be copied if it does not already exist.
 
-    $USERPROFILE/wsl-vpnkit/wsl-vpnkit.exe
-    $USERPROFILE/wsl-vpnkit/npiperelay.exe
+    $USERPROFILE/wsl-vpnkit/wsl-gvproxy.exe
 
 Logs for wsl-vpnkit can be viewed here.
 
