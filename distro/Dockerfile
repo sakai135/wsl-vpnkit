@@ -27,6 +27,7 @@ ARG VERSION=v0.0.0
 WORKDIR /app
 COPY --from=build /app/bin /files/
 COPY --from=licenses /app/licenses/gvproxy /app/licenses/vm /licenses/
+COPY ./distro/conf/udhcpc.conf /etc/udhcpc/udhcpc.conf
 COPY ./distro/scripts/ ./wsl-vpnkit ./LICENSE ./
 RUN echo "$REF" > /app/ref && \
     echo "$VERSION" > /app/version && \
