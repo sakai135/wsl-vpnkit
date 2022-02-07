@@ -4,6 +4,7 @@ CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
 USERPROFILE=$(wslpath "$($CMDSHELL /V:OFF /C 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
 CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
+WSL2_VM_IP="$(ifconfig eth0 | awk '/inet /{print substr($2, 6)}')"
 WSL2_TAP_NAME=eth0
 WIN_STORE="/files"
 WIN_PATH="$USERPROFILE/wsl-vpnkit"
@@ -146,6 +147,7 @@ cleanup () {
     echo "iptables cleanup done"
 
     echo "restoring WSL 2 ip route..."
+    ip addr add $WSL2_VM_IP/255.255.255.0 dev $WSL2_TAP_NAME
     ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME
     echo "restored WSL 2 ip route"
 }
