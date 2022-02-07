@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -67,7 +68,21 @@ func main() {
 		DHCPStaticLeases: map[string]string{
 			vmIP: vmMacAddress,
 		},
-		DNS:              []types.Zone{},
+		DNS: []types.Zone{
+			{
+				Name: "internal.",
+				Records: []types.Record{
+					{
+						Name: "gateway",
+						IP:   net.ParseIP(gatewayIP),
+					},
+					{
+						Name: "host",
+						IP:   net.ParseIP(hostIP),
+					},
+				},
+			},
+		},
 		DNSSearchDomains: nil,
 		Forwards:         map[string]string{},
 		NAT: map[string]string{
