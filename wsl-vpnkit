@@ -80,11 +80,14 @@ run () {
 }
 
 tap_wait () {
-    echo "waiting for network connectivity..."
-    for i in {1..5}; do 
-        ping -c 1 -W 1 $VPNKIT_GATEWAY_IP &> /dev/null && break
+    echo "waiting for dhcp..."
+    c=1
+    while [ "$c" -eq 1 ]; do
+        sleep 0.1
+        ip route | grep "default via .* dev $TAP_NAME"
+        c=$?
     done
-    echo "network connected"
+    echo "dhcp completed"
 }
 
 ipconfig () {
