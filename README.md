@@ -1,4 +1,4 @@
-# wsl-vpnkit
+# wsl-vpnkit v0.2
 
 The `wsl-vpnkit` script uses [VPNKit](https://github.com/moby/vpnkit) and [npiperelay](https://github.com/jstarks/npiperelay) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
@@ -86,7 +86,7 @@ rm npiperelay_windows_amd64.zip
 mv npiperelay.exe "$USERPROFILE/wsl-vpnkit/"
 
 # download the wsl-vpnkit script to current directory
-wget https://raw.githubusercontent.com/sakai135/wsl-vpnkit/main/wsl-vpnkit
+wget https://raw.githubusercontent.com/sakai135/wsl-vpnkit/v0.2.x/wsl-vpnkit
 chmod +x wsl-vpnkit
 
 # run the wsl-vpnkit script
