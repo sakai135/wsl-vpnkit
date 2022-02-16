@@ -1,8 +1,10 @@
 # wsl-vpnkit
 
-The `wsl-vpnkit` script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
+The `wsl-vpnkit` v0.3 script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
 The releases bundle the script together with the binaries in an [Alpine](https://alpinelinux.org/) distro.
+
+For v0.2, please see the [v0.2.x branch](https://github.com/sakai135/wsl-vpnkit/tree/v0.2.x).
 
 ## Setup
 
