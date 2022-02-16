@@ -97,6 +97,12 @@ This is due to the VPN blocking connections to the WSL 2 VM network interface. P
 
 For this and other networking considerations when using WSL 2, see [Accessing network applications with WSL](https://docs.microsoft.com/en-us/windows/wsl/networking).
 
+### Run in foreground
+
+```sh
+wsl.exe -d wsl-vpnkit wsl-vpnkit
+```
+
 ### Try shutting down WSL 2 VM to reset
 
 ```pwsh
