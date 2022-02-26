@@ -2,12 +2,13 @@
 
 CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
 USERPROFILE=$(wslpath "$($CMDSHELL /V:OFF /C 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
-CONF_PATH="$USERPROFILE/wsl-vpnkit/wsl-vpnkit.conf"
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
 WSL2_VM_IP="$(ifconfig eth0 | awk '/inet /{print substr($2, 6)}')"
 WSL2_TAP_NAME=eth0
 WIN_STORE="/files"
 WIN_PATH="$USERPROFILE/wsl-vpnkit"
+CONF_PATH="$WIN_PATH/wsl-vpnkit.conf"
+GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
 
 echo "starting wsl-vpnkit"
 
@@ -22,7 +23,6 @@ if [ -f "$CONF_PATH" ]; then
 fi
 
 # Failsafe configuration to run as a standalone script
-GVPROXY_PATH=${GVPROXY_PATH:-/mnt/c/bin/wsl-gvproxy.exe}
 TAP_NAME=${TAP_NAME:-eth1}
 VPNKIT_SUBNET=${VPNKIT_SUBNET:-192.168.67.0/24}
 VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.67.1}
@@ -39,31 +39,28 @@ hash () {
 
 install_file () {
     FILE_STORE="$WIN_STORE/$1"
-    FILE_PATH="$WIN_PATH/$1"
-    if [ -f $FILE_STORE ]; then
+    FILE_PATH="$2"
+    if [ -f "$FILE_STORE" ]; then
         if [ ! -f "$FILE_PATH" ]; then
-            mkdir -p "$(dirname $FILE_PATH)"
-            cp $FILE_STORE "$FILE_PATH"
+            mkdir -p "$(dirname "$FILE_PATH")"
+            cp "$FILE_STORE" "$FILE_PATH"
             echo "copied $1 to $FILE_PATH"
         else
             echo "$1 exists at $FILE_PATH"
-            if [ `hash $FILE_STORE` != `hash "$FILE_PATH"` ]; then
-                cp -f $FILE_STORE "$FILE_PATH"
+            if [ `hash "$FILE_STORE"` != `hash "$FILE_PATH"` ]; then
+                cp -f "$FILE_STORE" "$FILE_PATH"
                 echo "updated $1 at $FILE_PATH"
             fi
         fi
     fi
+    if [ ! -f "$FILE_PATH" ]; then
+        echo "$1 not found at $FILE_PATH"
+        exit 1
+    fi
 }
 
 install () {
-    install_file wsl-gvproxy.exe
-    if [ ! -f $GVPROXY_PATH ]; then
-        GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
-    fi
-    if [ ! -f $GVPROXY_PATH ]; then
-        echo "gvproxy not found"
-        exit 1
-    fi
+    install_file wsl-gvproxy.exe "$GVPROXY_PATH"
 }
 
 run () {
