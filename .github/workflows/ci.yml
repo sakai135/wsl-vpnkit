@@ -14,7 +14,7 @@ jobs:
     permissions:
       checks: write
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Build
       run: |
         docker build -t $TAG_NAME -f ./distro/Dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
