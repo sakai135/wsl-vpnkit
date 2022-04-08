@@ -28,7 +28,7 @@ jobs:
         sha256sum wsl-vpnkit.tar.gz | tee wsl-vpnkit.tar.gz.sha256
         ls -la wsl-vpnkit.tar.gz
     - name: Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: wsl-vpnkit
         path: |
