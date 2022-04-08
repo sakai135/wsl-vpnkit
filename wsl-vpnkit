@@ -1,7 +1,7 @@
 #!/bin/sh
 
 CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
-USERPROFILE=$(wslpath "$($CMDSHELL /V:OFF /C 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
+USERPROFILE=$(wslpath "$($CMDSHELL /d /v:off /c 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
 WSL2_VM_IP="$(ifconfig eth0 | awk '/inet /{print substr($2, 6)}')"
 WSL2_TAP_NAME=eth0
