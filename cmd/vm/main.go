@@ -39,8 +39,6 @@ const (
 )
 
 func main() {
-	log.SetOutput(os.Stderr)
-
 	flag.StringVar(&endpoint, "path", "gvproxy.exe", "path to gvproxy.exe")
 	flag.StringVar(&iface, "iface", "tap0", "tap interface name")
 	flag.BoolVar(&debug, "debug", false, "debug")
