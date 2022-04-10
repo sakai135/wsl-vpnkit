@@ -111,9 +111,10 @@ check_ping () {
 
 check_dns () {
     TYPE=$([ "$1" = "4" ] && echo 'A' || echo 'AAAA')
-    nslookup -type=$TYPE $2 $3 >/dev/null && \
-        echo "check: ✔️ nslookup success for $2 $TYPE using $3" || \
-        echo "check: ❌ nslookup fail for $2 $TYPE using $3"
+    PROTOCOL=$([ "$4" = "tcp" ] && echo 'tcp' || echo 'notcp')
+    dig $TYPE $2 @$3 +$PROTOCOL +timeout=1 >/dev/null && \
+        echo "check: ✔️ dig success for $2 $TYPE $PROTOCOL using $3" || \
+        echo "check: ❌ dig fail for $2 $TYPE $PROTOCOL using $3"
 }
 
 check_https () {
@@ -130,10 +131,10 @@ check () {
     check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 4 $CHECK_HOST $CHECK_DNS
+    check_dns 4 $CHECK_HOST $DNS_IP tcp
+    check_dns 4 $CHECK_HOST $CHECK_DNS tcp
     check_ping 4 'external host' $CHECK_HOST
     check_dns 6 $CHECK_HOST $DNS_IP
-    check_dns 6 $CHECK_HOST $VPNKIT_GATEWAY_IP
-    check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 6 $CHECK_HOST $CHECK_DNS
     check_ping 6 'external host' $CHECK_HOST
     check_https "https://$CHECK_HOST"

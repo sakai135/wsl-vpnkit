@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
 	"github.com/containers/gvisor-tap-vsock/pkg/virtualnetwork"
 	"github.com/pkg/errors"
+	"github.com/sakai135/wsl-vpnkit/pkg/services/dns"
 	"github.com/sakai135/wsl-vpnkit/pkg/transport"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -122,6 +124,17 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 	if err != nil {
 		return err
 	}
+
+	lnDns, err := vn.Listen("tcp", fmt.Sprintf("%s:53", gatewayIP))
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := dns.ServeListener(lnDns, configuration.DNS)
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 
 	conn := transport.GetStdioConn()
 	err = vn.AcceptQemu(ctx, conn)
