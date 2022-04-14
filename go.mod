@@ -20,6 +20,7 @@ require (
 
 require (
 	github.com/containers/gvisor-tap-vsock v0.3.0
+	github.com/google/go-cmp v0.5.7
 	github.com/google/gopacket v1.1.19
 	github.com/sirupsen/logrus v1.8.1
 	github.com/songgao/packets v0.0.0-20160404182456-549a10cd4091

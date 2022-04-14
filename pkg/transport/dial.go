@@ -7,8 +7,10 @@ import (
 	"strconv"
 )
 
-func Dial(endpoint string, args ...string) (net.Conn, error) {
-	cmd := exec.Command(endpoint, args[:]...)
+var execCommand = exec.Command
+
+func Dial(endpoint string, arg ...string) (net.Conn, error) {
+	cmd := execCommand(endpoint, arg[:]...)
 	cmd.Stderr = os.Stderr
 
 	stdin, err := cmd.StdinPipe()
