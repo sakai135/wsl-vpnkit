@@ -9,6 +9,7 @@ WIN_STORE="/files"
 WIN_PATH="$USERPROFILE/wsl-vpnkit"
 CONF_PATH="$WIN_PATH/wsl-vpnkit.conf"
 GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
+VM_PID=
 
 echo "starting wsl-vpnkit"
 
@@ -73,17 +74,25 @@ run () {
         -host-ip "$VPNKIT_HOST_IP" \
         -vm-ip "$VPNKIT_LOWEST_IP" \
         -debug="$VPNKIT_DEBUG" &
+    VM_PID=$!
     echo "started gvproxy"
 }
 
 tap_wait () {
     echo "waiting for dhcp..."
     c=1
-    while [ "$c" -eq 1 ]; do
+    d=0
+    while [ "$c" -eq 1 ] && [ "$d" -eq 0 ]; do
         sleep 0.1
         ip route | grep "default via .* dev $TAP_NAME"
         c=$?
+        kill -0 $VM_PID
+        d=$?
     done
+    if [ "$d" -eq 1 ]; then
+        echo "wsl-vm exited"
+        exit 1
+    fi
     echo "dhcp completed"
 }
 
