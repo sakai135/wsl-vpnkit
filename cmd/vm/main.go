@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -21,69 +20,36 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
-var (
-	endpoint string
-	iface    string
-	debug    bool
-	mtu      int
-
-	subnet    string
-	gatewayIP string
-	hostIP    string
-	vmIP      string
-	proxyMtu  int
-)
-
-const (
-	mac = "5a:94:ef:e4:0c:ee"
-)
-
 func main() {
-	flag.StringVar(&endpoint, "path", "gvproxy.exe", "path to gvproxy.exe")
-	flag.StringVar(&iface, "iface", "tap0", "tap interface name")
-	flag.BoolVar(&debug, "debug", false, "debug")
-	flag.IntVar(&mtu, "mtu", 4000, "mtu")
-
-	flag.StringVar(&subnet, "subnet", "192.168.127.0/24", "Set the subnet")
-	flag.StringVar(&gatewayIP, "gateway-ip", "192.168.127.1", "Set the IP for the gateway")
-	flag.StringVar(&hostIP, "host-ip", "192.168.127.254", "Set the IP for accessing the host from the WSL 2 VM")
-	flag.StringVar(&vmIP, "vm-ip", "192.168.127.2", "Set the IP for the WSL 2 VM")
-	flag.IntVar(&proxyMtu, "proxy-mtu", 1500, "Set the MTU for the proxy")
-
-	flag.Parse()
-
-	links, err := netlink.LinkList()
+	f, err := parseVMFlags()
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, link := range links {
-		if iface == link.Attrs().Name {
-			log.Infof("interface %s prevented this program to run", link.Attrs().Name)
-			return
-		}
-	}
-	if err := run(); err != nil {
+
+	if err := run(f); err != nil {
 		log.Fatal(err)
+		if err == io.EOF {
+			os.Exit(1)
+		}
 	}
 }
 
-func parseProxyOptions() []string {
+func parseProxyOptions(f *VMFlags) []string {
 	options := []string{
-		"-subnet", subnet,
-		"-gateway-ip", gatewayIP,
-		"-host-ip", hostIP,
-		"-vm-ip", vmIP,
-		"-mtu", strconv.Itoa(proxyMtu),
+		"-subnet", f.Subnet,
+		"-gateway-ip", f.GatewayIP,
+		"-host-ip", f.HostIP,
+		"-vm-ip", f.VMIP,
+		"-mtu", strconv.Itoa(f.ProxyMTU),
 	}
-	if debug {
+	if f.Debug {
 		options = append(options, "-debug")
 	}
 	return options
 }
 
-func run() error {
-	proxyArgs := parseProxyOptions()
-	conn, err := transport.Dial(endpoint, proxyArgs[:]...)
+func run(f *VMFlags) error {
+	conn, err := transport.Dial(f.Endpoint, parseProxyOptions(f)[:]...)
 	if err != nil {
 		return errors.Wrap(err, "cannot connect to host")
 	}
@@ -92,7 +58,7 @@ func run() error {
 	tap, err := water.New(water.Config{
 		DeviceType: water.TAP,
 		PlatformSpecificParams: water.PlatformSpecificParams{
-			Name: iface,
+			Name: f.Iface,
 		},
 	})
 	if err != nil {
@@ -100,22 +66,22 @@ func run() error {
 	}
 	defer tap.Close()
 
-	if err := linkUp(); err != nil {
+	if err := linkUp(f.Iface, f.MAC); err != nil {
 		return errors.Wrap(err, "cannot set mac address")
 	}
 
 	errCh := make(chan error, 1)
-	go tx(conn, tap, errCh, mtu)
-	go rx(conn, tap, errCh, mtu)
+	go tx(conn, tap, errCh, f.MTU, f.Debug)
+	go rx(conn, tap, errCh, f.MTU, f.Debug)
 	go func() {
-		if err := dhcp(); err != nil {
+		if err := dhcp(f.Iface); err != nil {
 			errCh <- errors.Wrap(err, "dhcp error")
 		}
 	}()
 	return <-errCh
 }
 
-func linkUp() error {
+func linkUp(iface string, mac string) error {
 	link, err := netlink.LinkByName(iface)
 	if err != nil {
 		return err
@@ -133,7 +99,7 @@ func linkUp() error {
 	return netlink.LinkSetUp(link)
 }
 
-func dhcp() error {
+func dhcp(iface string) error {
 	if _, err := exec.LookPath("udhcpc"); err == nil { // busybox dhcp client
 		cmd := exec.Command("udhcpc", "-f", "-q", "-i", iface, "-v")
 		cmd.Stderr = os.Stderr
@@ -146,7 +112,7 @@ func dhcp() error {
 	return cmd.Run()
 }
 
-func rx(conn net.Conn, tap *water.Interface, errCh chan error, mtu int) {
+func rx(conn net.Conn, tap *water.Interface, errCh chan error, mtu int, debug bool) {
 	log.Info("waiting for packets...")
 	var frame ethernet.Frame
 	for {
@@ -177,7 +143,7 @@ func rx(conn net.Conn, tap *water.Interface, errCh chan error, mtu int) {
 	}
 }
 
-func tx(conn net.Conn, tap *water.Interface, errCh chan error, mtu int) {
+func tx(conn net.Conn, tap *water.Interface, errCh chan error, mtu int, debug bool) {
 	sizeBuf := make([]byte, 2)
 	buf := make([]byte, mtu+header.EthernetMinimumSize)
 
