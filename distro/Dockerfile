@@ -1,4 +1,4 @@
-FROM golang:1.18.0-alpine as build
+FROM golang:1.18.1-alpine3.15 as build
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -8,7 +8,7 @@ RUN GOOS=windows go build -ldflags '-s -w -H=windowsgui' -o bin/wsl-gvproxy.exe 
     GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm && \
     find ./bin -type f -exec sha256sum {} \;
 
-FROM golang:1.18.0-alpine as licenses
+FROM golang:1.18.1-alpine3.15 as licenses
 RUN apk add --no-cache git && \
     apk list --installed && \
     go install github.com/google/go-licenses@v1.0.0

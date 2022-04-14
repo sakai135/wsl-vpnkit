@@ -3,6 +3,7 @@ module github.com/sakai135/wsl-vpnkit
 go 1.18
 
 require (
+	github.com/miekg/dns v1.1.43
 	github.com/pkg/errors v0.9.1
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 )
@@ -12,7 +13,6 @@ require (
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/tcpproxy v0.0.0-20200125044825-b6bb9b5b8252 // indirect
 	github.com/insomniacslk/dhcp v0.0.0-20210812084645-decc701b3665 // indirect
-	github.com/miekg/dns v1.1.43 // indirect
 	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
