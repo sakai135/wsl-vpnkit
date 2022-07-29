@@ -6,6 +6,7 @@ on:
 env:
   TAG_NAME: ${{ format('wslvpnkit:{0}-{1}', github.sha, github.run_number) }}
   RUN_URL: ${{ format('{0}/{1}/actions/runs/{2}/attempts/{3}', github.server_url, github.repository, github.run_id, github.run_attempt) }}
+  DOCKLE_HOST: "unix:///var/run/docker.sock" # https://github.com/Azure/container-scan/issues/146
 
 jobs:
 
