@@ -20,7 +20,7 @@ RUN go-licenses save ./cmd/gvproxy --save_path ./licenses/gvproxy && \
     go-licenses save ./cmd/vm --save_path ./licenses/vm
 
 FROM alpine:3.16.1
-RUN apk add --no-cache openrc iptables bind-tools && \
+RUN apk add --no-cache openrc iptables && \
     apk list --installed
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0
