@@ -1,4 +1,4 @@
-FROM alpine:3.15.0 AS vpnkit
+FROM alpine:3.16.1 AS vpnkit
 WORKDIR /files
 RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit-tap-vsockd && \
     wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vpnkit.exe && \
@@ -6,7 +6,7 @@ RUN wget https://github.com/sakai135/vpnkit/releases/download/v0.5.0-20211026/vp
     chmod +x vpnkit-tap-vsockd && \
     find . -type f -exec sha256sum {} \;
 
-FROM alpine:3.15.0 AS npiperelay
+FROM alpine:3.16.1 AS npiperelay
 RUN apk add --no-cache p7zip && \
     apk list --installed
 WORKDIR /files
@@ -15,7 +15,7 @@ RUN wget https://github.com/jstarks/npiperelay/releases/download/v0.1.0/npiperel
     rm npiperelay_windows_amd64.zip && \
     find . -type f -exec sha256sum {} \;
 
-FROM alpine:3.15.0
+FROM alpine:3.16.1
 RUN apk add --no-cache socat openrc iptables && \
     apk list --installed
 ARG REF=https://example.com/
