@@ -4,7 +4,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd ./cmd
 COPY pkg ./pkg
-RUN GOOS=windows go build -ldflags '-s -w -H=windowsgui' -o bin/wsl-gvproxy.exe ./cmd/gvproxy && \
+RUN GOOS=windows go build -ldflags '-H=windowsgui' -o bin/wsl-gvproxy.exe ./cmd/gvproxy && \
     GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm && \
     find ./bin -type f -exec sha256sum {} \;
 
