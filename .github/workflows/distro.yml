@@ -1,4 +1,4 @@
-name: Build
+name: Distro
 
 on:
   push:
@@ -9,25 +9,28 @@ env:
   DOCKLE_HOST: "unix:///var/run/docker.sock" # https://github.com/Azure/container-scan/issues/146
 
 jobs:
-
   build:
     runs-on: ubuntu-20.04
     permissions:
       checks: write
     steps:
     - uses: actions/checkout@v3
+
     - name: Build
       run: |
         docker build -t $TAG_NAME -f ./distro/Dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
+
     - uses: azure/container-scan@v0
       with:
         image-name: ${{ env.TAG_NAME }}
+
     - name: Package
       run: |
         CONTAINER_ID=$(docker create $TAG_NAME)
         docker export $CONTAINER_ID | gzip > wsl-vpnkit.tar.gz
         sha256sum wsl-vpnkit.tar.gz | tee wsl-vpnkit.tar.gz.sha256
         ls -la wsl-vpnkit.tar.gz
+
     - name: Artifacts
       uses: actions/upload-artifact@v3
       with:

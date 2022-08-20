@@ -50,7 +50,7 @@ func TestHelperProcess(*testing.T) {
 		if string(read) == "error" {
 			os.Exit(1)
 		}
-		conn.Write(read)
+		_, _ = conn.Write(read)
 	}
 }
 
@@ -73,7 +73,7 @@ func TestDial(t *testing.T) {
 		t.Errorf("unexpected string %s", str)
 	}
 
-	conn.Write([]byte("hi there\n"))
+	_, _ = conn.Write([]byte("hi there\n"))
 	line, _, err = reader.ReadLine()
 	if err != nil {
 		t.Error(err)
@@ -104,7 +104,7 @@ func TestDial_Error(t *testing.T) {
 		t.Error(err)
 	}
 
-	conn.Write([]byte("error"))
+	_, _ = conn.Write([]byte("error"))
 	_, _, err = reader.ReadLine()
 	if err == nil {
 		t.Error("expected error")
