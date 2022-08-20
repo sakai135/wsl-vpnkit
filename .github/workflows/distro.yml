@@ -1,9 +1,7 @@
 name: Distro
 
 on:
-  workflow_run: 
-    workflows: [Go]
-    types: [completed]
+  push:
 
 env:
   TAG_NAME: ${{ format('wslvpnkit:{0}-{1}', github.sha, github.run_number) }}
@@ -11,7 +9,7 @@ env:
   DOCKLE_HOST: "unix:///var/run/docker.sock" # https://github.com/Azure/container-scan/issues/146
 
 jobs:
-  on-success:
+  build:
     runs-on: ubuntu-20.04
     permissions:
       checks: write
