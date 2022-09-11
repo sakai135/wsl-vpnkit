@@ -7,8 +7,16 @@ LOG_PATH="/var/log/$EXECUTABLE.log"
 
 ret=0
 
+_debug_check() {
+    if [ -n "$DEBUG" ]; then
+        set -x
+        test -f $PID_PATH && cat $PID_PATH
+        ps
+    fi
+}
+
 start() {
-    [ -n "$DEBUG" ] && set -x
+    _debug_check
     start-stop-daemon \
         --pidfile $PID_PATH \
         --make-pidfile \
@@ -23,11 +31,7 @@ start() {
 }
 
 stop() {
-    if [ -n "$DEBUG" ]; then
-        set -x
-        ps
-        test -f $PID_PATH && cat $PID_PATH
-    fi
+    _debug_check
     start-stop-daemon \
         --pidfile $PID_PATH \
         --retry 2 \
@@ -39,11 +43,7 @@ stop() {
 }
 
 status() {
-    if [ -n "$DEBUG" ]; then
-        set -x
-        ps
-        test -f $PID_PATH && cat $PID_PATH
-    fi
+    _debug_check
     test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
     ret=$?
     if [ $ret = 0 ]; then
@@ -53,6 +53,12 @@ status() {
     fi
 }
 
+restart() {
+    stop
+    start
+    ret=$?
+}
+
 case "$1" in
     start)
         start
@@ -60,11 +66,14 @@ case "$1" in
     stop)
         stop
         ;;
+    restart)
+        restart
+        ;;
     status)
         status
         ;;
     *)
-        echo "Usage: $EXECUTABLE {start|stop|status}"
+        echo "Usage: $EXECUTABLE {start|stop|restart|status}"
         exit 1
 esac
 
