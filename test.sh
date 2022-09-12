@@ -1,32 +1,19 @@
 #! /bin/sh -xe
 
-# run from repo root
-# ./distro/test.sh
-
-USERPROFILE="$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')"
-DUMP=wsl-vpnkit.tar.gz
-TAG_NAME=wslvpnkit
-
-# build
-docker build -t $TAG_NAME -f ./distro/Dockerfile .
-CONTAINER_ID=$(docker create $TAG_NAME)
-docker export $CONTAINER_ID | gzip > $DUMP
-docker container rm $CONTAINER_ID
-ls -la $DUMP
-
-# reinstall
-wsl.exe --unregister wsl-vpnkit || :
-wsl.exe --import wsl-vpnkit "$USERPROFILE\\wsl-vpnkit" $DUMP --version 2
-rm $DUMP
+# ensuring distro is stopped before running tests
+if wsl.exe -d wsl-vpnkit service wsl-vpnkit status; then
+  wsl.exe -d wsl-vpnkit service wsl-vpnkit stop || \
+  wsl.exe -t wsl-vpnkit
+fi
 
 # tests
-for debug_value in '1' ''; do
+for debug_value in '1' '2' ''; do
   if [ -n "${debug_value}" ]; then
     debug_str="DEBUG=${debug_value}"
   else
     debug_str=""
   fi
-  echo "####### Test Round with debug_str [${debug_str}] #######"
+  echo "####### Test Round with debug_str [${debug_str}] #######" | grep --colour=always .
 
   # start service
   wsl.exe -d wsl-vpnkit ${debug_str} service wsl-vpnkit start
@@ -59,4 +46,4 @@ for debug_value in '1' ''; do
   wsl.exe -d wsl-vpnkit sh -c 'echo 1 | source /etc/profile'
 done
 
-echo "$0 Finished"
+echo "$0 Finished" | grep --colour=always .

@@ -64,8 +64,8 @@ This will build and import the distro.
 ```sh
 git clone https://github.com/sakai135/wsl-vpnkit.git
 cd wsl-vpnkit/
-
-./distro/test.sh
+./build.sh
+./test.sh
 ```
 
 ## Using `wsl-vpnkit` as a standalone script
