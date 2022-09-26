@@ -1,26 +1,61 @@
 #! /bin/sh
 
-PID_PATH="/var/run/wsl-vpnkit.pid"
-LOG_PATH="/var/log/wsl-vpnkit.log"
+EXECUTABLE="wsl-vpnkit"                 # starting point
+SUB_PROCESS="wsl-vm"                    # forked sub processes
+PID_PATH="/var/run/$EXECUTABLE.pid"
+LOG_PATH="/var/log/$EXECUTABLE.log"
 
 ret=0
 
+_debug_check() {
+    if [ -n "$DEBUG" ]; then
+        set -x
+        test -f $PID_PATH && cat $PID_PATH
+        ps
+    fi
+}
+
 start() {
+    _debug_check
     start-stop-daemon \
         --pidfile $PID_PATH \
         --make-pidfile \
         --background \
         --stdout $LOG_PATH \
         --stderr $LOG_PATH \
-        --exec wsl-vpnkit \
+        --exec $EXECUTABLE \
+        --wait 1000 --progress \
+        ${DEBUG+--verbose} \
         --start
     ret=$?
 }
 
 stop() {
+    _debug_check
     start-stop-daemon \
         --pidfile $PID_PATH \
+        --retry 2 \
+        ${DEBUG+--verbose} \
         --stop
+    ret=$?
+    # kill sub processes if still running
+    pgrep $SUB_PROCESS >/dev/null && pkill -9 $SUB_PROCESS
+}
+
+status() {
+    _debug_check
+    test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
+    ret=$?
+    if [ $ret = 0 ]; then
+        echo Service $EXECUTABLE is running
+    else
+        echo Service $EXECUTABLE is not running
+    fi
+}
+
+restart() {
+    stop
+    start
     ret=$?
 }
 
@@ -31,8 +66,14 @@ case "$1" in
     stop)
         stop
         ;;
+    restart)
+        restart
+        ;;
+    status)
+        status
+        ;;
     *)
-        echo "Usage: wsl-vpnkit {start|stop}"
+        echo "Usage: $EXECUTABLE {start|stop|restart|status}"
         exit 1
 esac
 

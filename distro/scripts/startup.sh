@@ -8,12 +8,12 @@ touch $LOG_PATH
 
 echo "
 wsl-vpnkit $VERSION
-This distro is only intended for running wsl-vpnkit. 
+This distro is only intended for running wsl-vpnkit.
 
 Run the following commands from Windows or other WSL 2 distros to use.
 
-    wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit start
     wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit stop
+    wsl.exe -d $WSL_DISTRO_NAME service wsl-vpnkit start
 
 The following file will be copied if it does not already exist.
 
@@ -22,6 +22,10 @@ The following file will be copied if it does not already exist.
 Logs for wsl-vpnkit can be viewed here.
 
     wsl.exe -d $WSL_DISTRO_NAME tail -f $LOG_PATH
+
+To see only the most recent logs
+
+    wsl.exe -d $WSL_DISTRO_NAME sh -c \"tac $LOG_PATH | awk '{print}; /starting wsl-vpnkit/{exit}' | tac\"
 
 Config for wsl-vpnkit can be edited here.
 
