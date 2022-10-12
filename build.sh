@@ -16,5 +16,5 @@ ls -la $DUMP
 
 # reinstall
 wsl.exe --unregister wsl-vpnkit || :
-wsl.exe --import wsl-vpnkit "$USERPROFILE\\wsl-vpnkit" $DUMP --version 2
+wsl.exe --import wsl-vpnkit "C:\Program Files\wsl-vpnkit" $DUMP --version 2
 rm $DUMP
