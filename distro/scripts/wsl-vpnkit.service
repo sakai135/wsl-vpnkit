@@ -24,7 +24,6 @@ start() {
         --stdout $LOG_PATH \
         --stderr $LOG_PATH \
         --exec $EXECUTABLE \
-        --wait 1000 --progress \
         ${DEBUG+--verbose} \
         --start
     ret=$?
