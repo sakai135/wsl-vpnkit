@@ -1,7 +1,8 @@
 #! /bin/sh
 
 EXECUTABLE="wsl-vpnkit"                 # starting point
-SUB_PROCESS="wsl-vm"                    # forked sub processes
+SUB_PROCESS1="wsl-vm"                   # forked sub processes
+SUB_PROCESS2="wsl-gvproxy"              # forked sub processes
 PID_PATH="/var/run/$EXECUTABLE.pid"
 LOG_PATH="/var/log/$EXECUTABLE.log"
 
@@ -17,29 +18,33 @@ _debug_check() {
 
 start() {
     _debug_check
-    start-stop-daemon \
-        --pidfile $PID_PATH \
-        --make-pidfile \
-        --background \
-        --stdout $LOG_PATH \
-        --stderr $LOG_PATH \
-        --exec $EXECUTABLE \
-        --wait 1000 --progress \
-        ${DEBUG+--verbose} \
-        --start
-    ret=$?
+    ret=1
+    status >/dev/null && {
+        echo "wsl-vpnkit is already running"
+    } || {
+        nohup $EXECUTABLE >$LOG_PATH 2>&1 &
+        echo $! > $PID_PATH
+        pgrep -P $(cat $PID_PATH) &>/dev/null && echo "Service wsl-vpnkit is running"
+        ret=0
+    }
+    return $ret
 }
 
 stop() {
     _debug_check
-    start-stop-daemon \
-        --pidfile $PID_PATH \
-        --retry 2 \
-        ${DEBUG+--verbose} \
-        --stop
-    ret=$?
-    # kill sub processes if still running
-    pgrep $SUB_PROCESS >/dev/null && pkill -9 $SUB_PROCESS
+    if [ -f $PID_PATH ]; then
+        kill -15 $(cat $PID_PATH)
+        rm $PID_PATH
+        # kill sub processes if still running
+        for subp in $SUB_PROCESS1 $SUB_PROCESS2; do
+            while pgrep -a $subp >/dev/null; do
+                pkill -9 $subp; sleep 0.1
+            done
+        done
+        ${DEBUG+ps}
+    fi
+    ret=0
+    return $ret
 }
 
 status() {
@@ -51,6 +56,7 @@ status() {
     else
         echo Service $EXECUTABLE is not running
     fi
+    return $ret
 }
 
 restart() {
