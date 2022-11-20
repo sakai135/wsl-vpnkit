@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -e
 
 EXECUTABLE="wsl-vpnkit"                 # starting point
 SUB_PROCESS1="wsl-vm"                   # forked sub processes
@@ -6,29 +6,23 @@ SUB_PROCESS2="wsl-gvproxy"              # forked sub processes
 PID_PATH="/var/run/$EXECUTABLE.pid"
 LOG_PATH="/var/log/$EXECUTABLE.log"
 
-ret=0
-
 _debug_check() {
     if [ -n "$DEBUG" ]; then
         set -x
-        test -f $PID_PATH && cat $PID_PATH
+        test -f $PID_PATH && cat $PID_PATH || true
         ps
     fi
 }
 
 start() {
-    _debug_check >&2
-    ret=1
-    status >/dev/null && {
+    if status >/dev/null; then
         echo "wsl-vpnkit is already running"
-    } || {
+    else
         nohup $EXECUTABLE >$LOG_PATH 2>&1 &
         echo $! > $PID_PATH
         sleep 1
         status
-        ret=$?
-    }
-    return $ret
+    fi
 }
 
 stop() {
@@ -42,45 +36,21 @@ stop() {
         done
         ${DEBUG+ps} >&2
     fi
-    ret=0
-    return $ret
 }
 
 status() {
     _debug_check >&2
-    test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
-    ret=$?
-    if [ $ret = 0 ]; then
+    if test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null; then
         echo Service $EXECUTABLE is running
     else
         echo Service $EXECUTABLE is not running
-    fi
-    return $ret
-}
-
-restart() {
-    stop
-    start
-    ret=$?
-    # kill sub processes if still running
-    pgrep $SUB_PROCESS >/dev/null && pkill -9 $SUB_PROCESS
-}
-
-status() {
-    _debug_check
-    test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
-    ret=$?
-    if [ $ret = 0 ]; then
-        echo Service $EXECUTABLE is running
-    else
-        echo Service $EXECUTABLE is not running
+        return 1
     fi
 }
 
 restart() {
     stop
     start
-    ret=$?
 }
 
 case "$1" in
@@ -98,7 +68,4 @@ case "$1" in
         ;;
     *)
         echo "Usage: $EXECUTABLE {start|stop|restart|status}"
-        ret=1
 esac
-
-exit $ret
