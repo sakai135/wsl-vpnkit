@@ -13,21 +13,21 @@ Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https:/
 ```pwsh
 # PowerShell
 
-wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz --version 2
+wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 wsl -d wsl-vpnkit
 ```
 
 Start `wsl-vpnkit` from your other WSL 2 distros. Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
 
 ```sh
-wsl.exe -d wsl-vpnkit service wsl-vpnkit start
+wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
 ```
 
 You can also check service status to start service only if needed.
 
 ```sh
-wsl.exe -d wsl-vpnkit service wsl-vpnkit status >/dev/null || \
-  wsl.exe -d wsl-vpnkit service wsl-vpnkit start
+wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit status >/dev/null || \
+wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
 ```
 
 ### Notes
@@ -43,7 +43,7 @@ To update, unregister the existing distro and import the new version.
 # PowerShell
 
 wsl --unregister wsl-vpnkit
-wsl --import wsl-vpnkit $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz --version 2
+wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 ```
 
 ### Uninstall
@@ -109,7 +109,7 @@ For this and other networking considerations when using WSL 2, see [Accessing ne
 ### Run in foreground
 
 ```sh
-wsl.exe -d wsl-vpnkit wsl-vpnkit
+wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 ```
 
 ### Try shutting down WSL 2 VM to reset
@@ -127,5 +127,5 @@ If you set DEBUG variable before calling service you can see more debug informat
 
 Example:
 ```sh
-wsl.exe -d wsl-vpnkit DEBUG=1 service wsl-vpnkit restart
+wsl.exe -d wsl-vpnkit --cd /app DEBUG=1 service wsl-vpnkit restart
 ```

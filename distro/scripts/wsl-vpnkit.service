@@ -62,6 +62,25 @@ restart() {
     stop
     start
     ret=$?
+    # kill sub processes if still running
+    pgrep $SUB_PROCESS >/dev/null && pkill -9 $SUB_PROCESS
+}
+
+status() {
+    _debug_check
+    test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
+    ret=$?
+    if [ $ret = 0 ]; then
+        echo Service $EXECUTABLE is running
+    else
+        echo Service $EXECUTABLE is not running
+    fi
+}
+
+restart() {
+    stop
+    start
+    ret=$?
 }
 
 case "$1" in

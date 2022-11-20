@@ -21,9 +21,9 @@ jobs:
       run: |
         docker build -t $TAG_NAME -f ./distro/Dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
 
-    - uses: azure/container-scan@v0
+    - uses: anchore/scan-action@v3
       with:
-        image-name: ${{ env.TAG_NAME }}
+        image: ${{ env.TAG_NAME }}
 
     - name: Package
       run: |
