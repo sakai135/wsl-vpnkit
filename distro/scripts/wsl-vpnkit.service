@@ -17,38 +17,37 @@ _debug_check() {
 }
 
 start() {
-    _debug_check
+    _debug_check >&2
     ret=1
     status >/dev/null && {
         echo "wsl-vpnkit is already running"
     } || {
         nohup $EXECUTABLE >$LOG_PATH 2>&1 &
         echo $! > $PID_PATH
-        pgrep -P $(cat $PID_PATH) &>/dev/null && echo "Service wsl-vpnkit is running"
-        ret=0
+        sleep 1
+        status
+        ret=$?
     }
     return $ret
 }
 
 stop() {
-    _debug_check
+    _debug_check >&2
     if [ -f $PID_PATH ]; then
         kill -15 $(cat $PID_PATH)
         rm $PID_PATH
         # kill sub processes if still running
         for subp in $SUB_PROCESS1 $SUB_PROCESS2; do
-            while pgrep -a $subp >/dev/null; do
-                pkill -9 $subp; sleep 0.1
-            done
+            while pgrep -a $subp >/dev/null; do pkill -9 $subp; sleep 0.1; done
         done
-        ${DEBUG+ps}
+        ${DEBUG+ps} >&2
     fi
     ret=0
     return $ret
 }
 
 status() {
-    _debug_check
+    _debug_check >&2
     test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
     ret=$?
     if [ $ret = 0 ]; then
@@ -80,7 +79,7 @@ case "$1" in
         ;;
     *)
         echo "Usage: $EXECUTABLE {start|stop|restart|status}"
-        exit 1
+        ret=1
 esac
 
 exit $ret
