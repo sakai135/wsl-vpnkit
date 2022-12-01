@@ -1,56 +1,69 @@
-#! /bin/sh -e
+#! /bin/sh
 
 EXECUTABLE="wsl-vpnkit"                 # starting point
-SUB_PROCESS1="wsl-vm"                   # forked sub processes
-SUB_PROCESS2="wsl-gvproxy"              # forked sub processes
 PID_PATH="/var/run/$EXECUTABLE.pid"
 LOG_PATH="/var/log/$EXECUTABLE.log"
+ret=0
 
 _debug_check() {
     if [ -n "$DEBUG" ]; then
         set -x
-        test -f $PID_PATH && cat $PID_PATH || true
         ps
     fi
 }
 
 start() {
-    if status >/dev/null; then
-        echo "wsl-vpnkit is already running"
-    else
-        nohup $EXECUTABLE >$LOG_PATH 2>&1 &
-        echo $! > $PID_PATH
-        sleep 1
-        status
-    fi
+    start-stop-daemon \
+        --pidfile $PID_PATH \
+        --make-pidfile \
+        --background \
+        --stdout $LOG_PATH \
+        --stderr $LOG_PATH \
+        --exec wsl-vpnkit \
+        --wait 1 --progress \
+        --start
+    status >/dev/null
 }
 
 stop() {
     _debug_check >&2
-    if [ -f $PID_PATH ]; then
-        kill -15 $(cat $PID_PATH)
-        rm $PID_PATH
-        # kill sub processes if still running
-        for subp in $SUB_PROCESS1 $SUB_PROCESS2; do
-            while pgrep -a $subp >/dev/null; do pkill -9 $subp; sleep 0.1; done
+    start-stop-daemon \
+        --pidfile $PID_PATH \
+        --stop
+    if status >/dev/null; then
+        pid=$(cat $PID_PATH)
+        kill -INT "$pid"
+        sleep 3
+    fi
+    if status >/dev/null; then
+        kill -TERM "$pid"
+    fi
+    rm -f $PID_PATH
+    # kill sub processes if still running
+    for subp in udhcpc wsl-gvproxy wsl-vm; do
+        while pgrep $subp >/dev/null; do
+            pkill -TERM $subp
+            sleep 1
         done
-        ${DEBUG+ps} >&2
+    done
+    if status >/dev/null; then
+        ret=1
+    else
+        ret=0
     fi
 }
 
 status() {
     _debug_check >&2
-    if test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null; then
+    if test -f $PID_PATH && pgrep -P "$(cat $PID_PATH)" >/dev/null; then
         echo Service $EXECUTABLE is running
+        ret=0
     else
         echo Service $EXECUTABLE is not running
-        return 1
+        rm -f $PID_PATH
+        ret=1
     fi
-}
-
-restart() {
-    stop
-    start
+    return $ret
 }
 
 case "$1" in
@@ -61,11 +74,15 @@ case "$1" in
         stop
         ;;
     restart)
-        restart
+        stop
+        start
         ;;
     status)
         status
         ;;
     *)
         echo "Usage: $EXECUTABLE {start|stop|restart|status}"
+        exit 1
 esac
+
+exit $ret
