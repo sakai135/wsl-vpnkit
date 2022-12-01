@@ -65,7 +65,13 @@ This will build and import the distro.
 git clone https://github.com/sakai135/wsl-vpnkit.git
 cd wsl-vpnkit/
 ./build.sh
+./import.sh
 ./test.sh
+```
+
+Optionally you may build with `podman` instead of `docker` (default) by overriding environment variable `DOCKER`:
+```sh
+DOCKER=podman ./build.sh
 ```
 
 ## Using `wsl-vpnkit` as a standalone script
