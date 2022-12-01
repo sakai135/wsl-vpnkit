@@ -61,7 +61,6 @@ status() {
         ret=0
     else
         echo Service $EXECUTABLE is not running
-        rm -f $PID_PATH
         ret=1
     fi
     return $ret
