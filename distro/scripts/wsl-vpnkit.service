@@ -19,16 +19,17 @@ start() {
         --background \
         --stdout $LOG_PATH \
         --stderr $LOG_PATH \
-        --exec wsl-vpnkit \
+        --exec $EXECUTABLE \
         --wait 1 --progress \
+        ${DEBUG+--verbose} \
         --start
-    status >/dev/null
+    status >/dev/null # sets ret var
 }
 
 stop() {
-    _debug_check >&2
     start-stop-daemon \
         --pidfile $PID_PATH \
+        ${DEBUG+--verbose} \
         --stop
     if status >/dev/null; then
         pid=$(cat $PID_PATH)
@@ -40,7 +41,7 @@ stop() {
     fi
     rm -f $PID_PATH
     # kill sub processes if still running
-    for subp in udhcpc wsl-gvproxy wsl-vm; do
+    for subp in wget udhcpc wsl-gvproxy wsl-vm; do
         while pgrep $subp >/dev/null; do
             pkill -TERM $subp
             sleep 1
