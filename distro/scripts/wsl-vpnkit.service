@@ -1,22 +1,18 @@
 #! /bin/sh
 
 EXECUTABLE="wsl-vpnkit"                 # starting point
-SUB_PROCESS="wsl-vm"                    # forked sub processes
 PID_PATH="/var/run/$EXECUTABLE.pid"
 LOG_PATH="/var/log/$EXECUTABLE.log"
-
 ret=0
 
 _debug_check() {
     if [ -n "$DEBUG" ]; then
         set -x
-        test -f $PID_PATH && cat $PID_PATH
         ps
     fi
 }
 
 start() {
-    _debug_check
     start-stop-daemon \
         --pidfile $PID_PATH \
         --make-pidfile \
@@ -24,38 +20,50 @@ start() {
         --stdout $LOG_PATH \
         --stderr $LOG_PATH \
         --exec $EXECUTABLE \
+        --wait 1 --progress \
         ${DEBUG+--verbose} \
         --start
-    ret=$?
+    status >/dev/null # sets ret var
 }
 
 stop() {
-    _debug_check
     start-stop-daemon \
         --pidfile $PID_PATH \
-        --retry 2 \
         ${DEBUG+--verbose} \
         --stop
-    ret=$?
+    if status >/dev/null; then
+        pid=$(cat $PID_PATH)
+        kill -INT "$pid"
+        sleep 3
+    fi
+    if status >/dev/null; then
+        kill -TERM "$pid"
+    fi
+    rm -f $PID_PATH
     # kill sub processes if still running
-    pgrep $SUB_PROCESS >/dev/null && pkill -9 $SUB_PROCESS
-}
-
-status() {
-    _debug_check
-    test -f $PID_PATH && pgrep -P $(cat $PID_PATH) &>/dev/null
-    ret=$?
-    if [ $ret = 0 ]; then
-        echo Service $EXECUTABLE is running
+    for subp in wget udhcpc wsl-gvproxy wsl-vm; do
+        while pgrep $subp >/dev/null; do
+            pkill -TERM $subp
+            sleep 1
+        done
+    done
+    if status >/dev/null; then
+        ret=1
     else
-        echo Service $EXECUTABLE is not running
+        ret=0
     fi
 }
 
-restart() {
-    stop
-    start
-    ret=$?
+status() {
+    _debug_check >&2
+    if test -f $PID_PATH && pgrep -P "$(cat $PID_PATH)" >/dev/null; then
+        echo Service $EXECUTABLE is running
+        ret=0
+    else
+        echo Service $EXECUTABLE is not running
+        ret=1
+    fi
+    return $ret
 }
 
 case "$1" in
@@ -66,7 +74,8 @@ case "$1" in
         stop
         ;;
     restart)
-        restart
+        stop
+        start
         ;;
     status)
         status

@@ -1,8 +1,8 @@
-#! /bin/sh -xe
+#!/bin/sh -xe
 
 # ensuring distro is stopped before running tests
+wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit stop
 if wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit status; then
-  wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit stop || \
   wsl.exe -t wsl-vpnkit
 fi
 
@@ -15,8 +15,13 @@ for debug_value in '1' '2' ''; do
   fi
   echo "####### Test Round with debug_str [${debug_str}] #######" | grep --colour=always .
 
+  # inital status should be stopped
+  output=$(wsl.exe -d wsl-vpnkit --cd /app ${debug_str} service wsl-vpnkit status)||echo "ignoring exit code"
+  echo "$output" | grep --colour=always "Service wsl-vpnkit is not running"
+
   # start service
   wsl.exe -d wsl-vpnkit --cd /app ${debug_str} service wsl-vpnkit start
+  sleep 2
   output=$(wsl.exe -d wsl-vpnkit --cd /app ${debug_str} service wsl-vpnkit status)
   echo "$output" | grep --colour=always "Service wsl-vpnkit is running"
 
@@ -34,6 +39,7 @@ for debug_value in '1' '2' ''; do
 
   # restart service
   wsl.exe -d wsl-vpnkit --cd /app ${debug_str} service wsl-vpnkit restart
+  sleep 2
   output=$(wsl.exe -d wsl-vpnkit --cd /app ${debug_str} service wsl-vpnkit status)
   echo "$output" | grep --colour=always "Service wsl-vpnkit is running"
 
