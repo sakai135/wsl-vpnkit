@@ -8,6 +8,7 @@ For v0.2, please see the [v0.2.x branch](https://github.com/sakai135/wsl-vpnkit/
 
 ## Setup
 
+### Install
 Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and import the distro into WSL 2. Running the distro will show a short intro and exit.
 
 ```pwsh
@@ -16,6 +17,9 @@ Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https:/
 wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 wsl -d wsl-vpnkit
 ```
+
+### Run on Startup
+#### shell init
 
 Start `wsl-vpnkit` from your other WSL 2 distros. Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
 
@@ -28,6 +32,44 @@ You can also check service status to start service only if needed.
 ```sh
 wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit status >/dev/null || \
 wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
+```
+
+#### systemd service
+
+With WSL2 version 0.67.6 and higher now supporting systemd you can setup a basic service to run the wsl-vpnkit distro service is running on startup. 
+
+Create the file `/etc/systemd/system/wsl-vpnkit.service` with the below contents.
+
+```sh
+[Unit]
+Description=WSL VPNKit
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+User=YOUR USERNAME HERE
+ExecStart=/mnt/c/WINDOWS/system32/wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
+ExecStop=/mnt/c/WINDOWS/system32/wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit stop
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable the service
+```
+sudo systemctl enable wsl-vpnkit.service
+```
+
+This will start it once on startup of the distro (not attempting it in every new shell session). You can also restart it easily with systemd.
+```
+sudo systemctl restart wsl-vpnkit.service
+```
+
+And then check that it was able to start successfully
+```
+systemctl status wsl-vpnkit.service
 ```
 
 ### Notes
