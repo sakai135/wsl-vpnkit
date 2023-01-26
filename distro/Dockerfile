@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.18.8-alpine3.16 as build
+FROM docker.io/library/golang:1.18.10-alpine3.17 as build
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -9,7 +9,7 @@ RUN GOOS=windows go build -ldflags '-H=windowsgui' -o bin/wsl-gvproxy.exe ./cmd/
     GOOS=linux CGO_ENABLED=0 go build -ldflags '-s -w' -o bin/wsl-vm ./cmd/vm && \
     find ./bin -type f -exec sha256sum {} \;
 
-FROM docker.io/library/golang:1.18.8-alpine3.16 as licenses
+FROM docker.io/library/golang:1.18.10-alpine3.17 as licenses
 RUN apk add --no-cache git && \
     apk list --installed && \
     go install github.com/google/go-licenses@v1.0.0
@@ -20,7 +20,7 @@ COPY pkg ./pkg
 RUN go-licenses save ./cmd/gvproxy --save_path ./licenses/gvproxy && \
     go-licenses save ./cmd/vm --save_path ./licenses/vm
 
-FROM docker.io/library/alpine:3.16.3
+FROM docker.io/library/alpine:3.17.1
 RUN apk add --no-cache openrc iptables && \
     apk list --installed
 ARG REF=https://example.com/
