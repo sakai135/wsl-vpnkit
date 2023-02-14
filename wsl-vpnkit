@@ -1,79 +1,31 @@
 #!/bin/sh
 
-CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
-USERPROFILE=$(wslpath "$($CMDSHELL /d /v:off /c 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
+# hardcoded in gvisor-tap-vsock
+VPNKIT_GATEWAY_IP="192.168.127.1"
+VPNKIT_HOST_IP="192.168.127.254"
+
+# overrideable with env
+GVPROXY_PATH=${GVPROXY_PATH:-/app/wsl-gvproxy.exe}
+DNS_IP=${DNS_IP:-192.168.127.1}
+TAP_NAME=${TAP_NAME:-wsltap}
+CHECK_HOST=${CHECK_HOST:-example.com}
+CHECK_DNS=${CHECK_DNS:-1.1.1.1}
+
+# WSL2 default values
+WSL2_TAP_NAME="eth0"
 WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-WSL2_VM_IP="$(ifconfig eth0 | awk '/inet /{print substr($2, 6)}')"
-WSL2_TAP_NAME=eth0
-WIN_STORE="/files"
-WIN_PATH="$USERPROFILE/wsl-vpnkit"
-CONF_PATH="$WIN_PATH/wsl-vpnkit.conf"
-GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
+
+# script vars
 VM_PID=
 
-echo "starting wsl-vpnkit"
-
-# Load defaults
-if [ -f "/app/defaults.conf" ]; then
-  . /app/defaults.conf
-fi
-#  Load user config if needed
-if [ -f "$CONF_PATH" ]; then
-  . "$CONF_PATH"
-  echo "loaded config: $CONF_PATH"
-fi
-
-# Failsafe configuration to run as a standalone script
-TAP_NAME=${TAP_NAME:-eth1}
-VPNKIT_SUBNET=${VPNKIT_SUBNET:-192.168.67.0/24}
-VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.67.1}
-VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.67.2}
-VPNKIT_LOWEST_IP=${VPNKIT_LOWEST_IP:-192.168.67.3}
-DNS_IP=${DNS_IP:-192.168.67.1}
-VPNKIT_DEBUG=${VPNKIT_DEBUG:-false}
-CHECK_DNS=${CHECK_DNS:-1.1.1.1}
-CHECK_HOST=${CHECK_HOST:-example.com}
-
-hash () {
-    md5sum "$1" | awk '{ print $1 }'
-}
-
-install_file () {
-    FILE_STORE="$WIN_STORE/$1"
-    FILE_PATH="$2"
-    if [ -f "$FILE_STORE" ]; then
-        if [ ! -f "$FILE_PATH" ]; then
-            mkdir -p "$(dirname "$FILE_PATH")"
-            cp "$FILE_STORE" "$FILE_PATH"
-            echo "copied $1 to $FILE_PATH"
-        else
-            echo "$1 exists at $FILE_PATH"
-            if [ `hash "$FILE_STORE"` != `hash "$FILE_PATH"` ]; then
-                cp -f "$FILE_STORE" "$FILE_PATH"
-                echo "updated $1 at $FILE_PATH"
-            fi
-        fi
-    fi
-    if [ ! -f "$FILE_PATH" ]; then
-        echo "$1 not found at $FILE_PATH"
-        exit 1
-    fi
-}
-
-install () {
-    install_file wsl-gvproxy.exe "$GVPROXY_PATH"
-}
+set -x
 
 run () {
     echo "starting gvproxy at $GVPROXY_PATH..."
     wsl-vm \
-        -path "$GVPROXY_PATH" \
-        -iface "$TAP_NAME" \
-        -subnet "$VPNKIT_SUBNET" \
-        -gateway-ip "$VPNKIT_GATEWAY_IP" \
-        -host-ip "$VPNKIT_HOST_IP" \
-        -vm-ip "$VPNKIT_LOWEST_IP" \
-        -debug="$VPNKIT_DEBUG" &
+        -url="stdio:$GVPROXY_PATH?listen-stdio=accept" \
+        -iface="$TAP_NAME" \
+        -stop-if-exist="$TAP_NAME" &
     VM_PID=$!
     echo "started gvproxy"
 }
@@ -84,7 +36,7 @@ tap_wait () {
     d=0
     while [ "$c" -eq 1 ] && [ "$d" -eq 0 ]; do
         sleep 0.1
-        ip route | grep "default via .* dev $TAP_NAME"
+        ip route show default dev $TAP_NAME | grep $TAP_NAME
         c=$?
         kill -0 $VM_PID
         d=$?
@@ -98,7 +50,7 @@ tap_wait () {
 
 ipconfig () {
     echo "removing WSL 2 ip route..."
-    ip route | grep -e "$WSL2_GATEWAY_IP" | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
+    ip route delete default dev $WSL2_TAP_NAME
     echo "removed WSL 2 ip route"
 
     echo "adding rules to iptables..."
@@ -157,8 +109,7 @@ cleanup () {
     echo "iptables cleanup done"
 
     echo "restoring WSL 2 ip route..."
-    ip addr add $WSL2_VM_IP/255.255.255.0 dev $WSL2_TAP_NAME
-    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME
+    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME proto kernel || :
     echo "restored WSL 2 ip route"
 }
 
@@ -174,7 +125,6 @@ if [ ${EUID:-$(id -u)} -ne 0 ]; then
 fi
 
 cleanup
-install
 run
 tap_wait
 ipconfig
