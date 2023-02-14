@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 # hardcoded in gvisor-tap-vsock
 VPNKIT_GATEWAY_IP="192.168.127.1"
 VPNKIT_HOST_IP="192.168.127.254"
@@ -10,6 +12,12 @@ DNS_IP=${DNS_IP:-192.168.127.1}
 TAP_NAME=${TAP_NAME:-wsltap}
 CHECK_HOST=${CHECK_HOST:-example.com}
 CHECK_DNS=${CHECK_DNS:-1.1.1.1}
+DEBUG=${DEBUG:-0}
+
+set +x
+if [ "$DEBUG" -eq 1 ]; then
+    set -x
+fi
 
 # WSL2 default values
 WSL2_TAP_NAME="eth0"
@@ -18,19 +26,18 @@ WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
 # script vars
 VM_PID=
 
-set -x
-
 run () {
     echo "starting gvproxy at $GVPROXY_PATH..."
     wsl-vm \
-        -url="stdio:$GVPROXY_PATH?listen-stdio=accept" \
+        -url="stdio:$GVPROXY_PATH?listen-stdio=accept&debug=$DEBUG" \
         -iface="$TAP_NAME" \
-        -stop-if-exist="$TAP_NAME" &
+        -stop-if-exist="$TAP_NAME" \
+        -debug=$DEBUG &
     VM_PID=$!
     echo "started gvproxy"
 }
 
-tap_wait () {
+dhcp_wait () {
     echo "waiting for dhcp..."
     c=1
     d=0
@@ -91,7 +98,8 @@ check () {
     check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 4 $CHECK_HOST $CHECK_DNS
-    check_ping 4 'external host' $CHECK_HOST
+    check_ping 4 'external host domain' $CHECK_HOST
+    check_ping 4 'external host IP' $CHECK_DNS
     check_dns 6 $CHECK_HOST $DNS_IP
     check_dns 6 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
@@ -126,7 +134,7 @@ fi
 
 cleanup
 run
-tap_wait
+dhcp_wait
 ipconfig
 check
 trap close exit
