@@ -5,28 +5,42 @@ set -x
 # hardcoded in gvisor-tap-vsock
 VPNKIT_GATEWAY_IP="192.168.127.1"
 VPNKIT_HOST_IP="192.168.127.254"
+VPNKIT_LOCAL_IP="192.168.127.2"
 
 # overrideable with env
 GVPROXY_PATH=${GVPROXY_PATH:-/app/wsl-gvproxy.exe}
-DNS_IP=${DNS_IP:-192.168.127.1}
 TAP_NAME=${TAP_NAME:-wsltap}
 CHECK_HOST=${CHECK_HOST:-example.com}
 CHECK_DNS=${CHECK_DNS:-1.1.1.1}
 DEBUG=${DEBUG:-0}
 
 set +x
-if [ "$DEBUG" -eq 1 ]; then
-    set -x
-fi
 
 # WSL2 default values
 WSL2_TAP_NAME="eth0"
-WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
+RESOLV_CONF="/etc/resolv.conf"
+WSL2_GATEWAY_IP="$(cat $RESOLV_CONF | awk '/^nameserver/ {print $2}')"
+
+set -x
+
+# show values
+WSL2_TAP_NAME=$WSL2_TAP_NAME
+WSL2_GATEWAY_IP=$WSL2_GATEWAY_IP
+
+if [ "$DEBUG" -eq 0 ]; then
+    set +x
+fi
 
 # script vars
 VM_PID=
+RESOLV_VALUE="$(cat $RESOLV_CONF)"
+
+# replace calls to iptables if iptables-legacy exists
+command -v iptables-legacy && alias iptables=iptables-legacy
 
 run () {
+    wsl2tap_down
+
     echo "starting gvproxy at $GVPROXY_PATH..."
     wsl-vm \
         -url="stdio:$GVPROXY_PATH?listen-stdio=accept&debug=$DEBUG" \
@@ -43,11 +57,14 @@ dhcp_wait () {
     d=0
     while [ "$c" -eq 1 ] && [ "$d" -eq 0 ]; do
         sleep 0.1
-        ip route show default dev $TAP_NAME | grep $TAP_NAME
+        ip route show dev $TAP_NAME | grep $VPNKIT_LOCAL_IP
         c=$?
         kill -0 $VM_PID
         d=$?
     done
+
+    resolv_restore
+
     if [ "$d" -eq 1 ]; then
         echo "wsl-vm exited"
         exit 1
@@ -55,20 +72,32 @@ dhcp_wait () {
     echo "dhcp completed"
 }
 
-ipconfig () {
-    echo "removing WSL 2 ip route..."
-    ip route delete default dev $WSL2_TAP_NAME
-    echo "removed WSL 2 ip route"
+wsl2tap_down () {
+    # take down WSL2 tap so DHCP will set default route
+    ip link set dev $WSL2_TAP_NAME down
+}
 
-    echo "adding rules to iptables..."
-    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-    iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
-    echo "iptables done"
+wsl2tap_up () {
+    # bring up WSL2 tap
+    ip link set dev $WSL2_TAP_NAME up
+
+    # restore WSL2 default route
+    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME
+}
+
+resolv_restore () {
+    # restore resolv.conf after DHCP
+    echo "$RESOLV_VALUE" > /etc/resolv.conf
+}
+
+iptables_set () {
+    iptables -t nat -$1 PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 PREROUTING -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -$1 OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 OUTPUT -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -$1 POSTROUTING -o $TAP_NAME -j MASQUERADE
 }
 
 check_ping () {
@@ -94,13 +123,11 @@ check () {
     check_ping 4 'WSL 2 gateway / Windows host' $WSL2_GATEWAY_IP
     check_ping 4 'Windows host' $VPNKIT_HOST_IP
     check_ping 4 'gateway' $VPNKIT_GATEWAY_IP
-    check_dns 4 $CHECK_HOST $DNS_IP
     check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 4 $CHECK_HOST $CHECK_DNS
     check_ping 4 'external host domain' $CHECK_HOST
     check_ping 4 'external host IP' $CHECK_DNS
-    check_dns 6 $CHECK_HOST $DNS_IP
     check_dns 6 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 6 $CHECK_HOST $CHECK_DNS
@@ -109,16 +136,9 @@ check () {
 }
 
 cleanup () {
-    echo "cleaning up iptables..."
-    iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $VPNKIT_HOST_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $DNS_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    echo "iptables cleanup done"
-
-    echo "restoring WSL 2 ip route..."
-    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME proto kernel || :
-    echo "restored WSL 2 ip route"
+    iptables_set D
+    wsl2tap_up
+    resolv_restore
 }
 
 close () {
@@ -132,11 +152,14 @@ if [ ${EUID:-$(id -u)} -ne 0 ]; then
     exit 1
 fi
 
+# trap first so close runs even if the rest of the commands fail
+trap close exit
+trap exit int term
+
+# run cleanup to restore any leftover configuration changes
 cleanup
 run
 dhcp_wait
-ipconfig
+iptables_set A
 check
-trap close exit
-trap exit int term
 wait
