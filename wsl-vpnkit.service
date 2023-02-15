@@ -1,0 +1,10 @@
+[Unit]
+Description=wsl-vpnkit
+After=network.target
+
+[Service]
+ExecStart=/mnt/c/WINDOWS/system32/wsl.exe -d wsl-vpnkit wsl-vpnkit
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

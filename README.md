@@ -1,41 +1,32 @@
 # wsl-vpnkit
 
-The `wsl-vpnkit` v0.3 script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
+The `wsl-vpnkit` v0.4 script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
-The releases bundle the script together with the binaries in an [Alpine](https://alpinelinux.org/) distro.
+TODO: add about upgrading from v0.3
 
 For v0.2, please see the [v0.2.x branch](https://github.com/sakai135/wsl-vpnkit/tree/v0.2.x).
 
 ## Setup
 
-Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and import the distro into WSL 2. Running the distro will show a short intro and exit.
+### Setup as a distro
+
+#### Install
+
+Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and import the distro into WSL 2. 
 
 ```pwsh
 # PowerShell
 
 wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
-wsl -d wsl-vpnkit
 ```
 
-Start `wsl-vpnkit` from your other WSL 2 distros. Add the command to your `.profile` or `.bashrc` to start `wsl-vpnkit` when you open your WSL terminal.
+Start `wsl-vpnkit` from your other WSL 2 distros. This will run `wsl-vpnkit` in the foreground. 
 
 ```sh
-wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
+wsl.exe -d wsl-vpnkit wsl-vpnkit
 ```
 
-You can also check service status to start service only if needed.
-
-```sh
-wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit status >/dev/null || \
-wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
-```
-
-### Notes
-
-* Ports on the WSL 2 VM are accessible from the Windows host using `localhost`.
-* Ports on the Windows host are accessible from WSL 2 using `host.internal`, `192.168.67.2` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
-
-### Update
+#### Update
 
 To update, unregister the existing distro and import the new version.
 
@@ -46,7 +37,7 @@ wsl --unregister wsl-vpnkit
 wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 ```
 
-### Uninstall
+#### Uninstall
 
 To uninstall, unregister the distro.
 
@@ -54,50 +45,69 @@ To uninstall, unregister the distro.
 # PowerShell
 
 wsl --unregister wsl-vpnkit
-rm -r $env:USERPROFILE\wsl-vpnkit
 ```
 
-### Build
-
-This will build and import the distro.
-
-```sh
-git clone https://github.com/sakai135/wsl-vpnkit.git
-cd wsl-vpnkit/
-./build.sh
-./import.sh
-./test.sh
-```
-
-Optionally you may build with `podman` instead of `docker` (default) by overriding environment variable `DOCKER`:
-```sh
-DOCKER=podman ./build.sh
-```
-
-## Using `wsl-vpnkit` as a standalone script
+### Setup as a standalone script
 
 The `wsl-vpnkit` script can be used as a normal script in your existing distro. This is an example setup script for Ubuntu.
 
 ```sh
-# download wsl-vpnkit
-VERSION=v0.3.x
-wget https://github.com/sakai135/wsl-vpnkit/releases/download/$VERSION/wsl-vpnkit.tar.gz
-tar --strip-components=1 -xf wsl-vpnkit.tar.gz app/wsl-vpnkit files/wsl-gvproxy.exe files/wsl-vm
-rm wsl-vpnkit.tar.gz
+# install dependencies
+apt-get install isc-dhcp-client iproute2 iptables iputils-ping dnsutils wget
 
-# place Windows exe
-USERPROFILE=$(wslpath "$(powershell.exe -c 'Write-Host -NoNewline $env:USERPROFILE')")
-mkdir -p "$USERPROFILE/wsl-vpnkit"
-mv wsl-gvproxy.exe "$USERPROFILE/wsl-vpnkit/wsl-gvproxy.exe"
+# download wsl-vpnkit and unpack
+VERSION=v0.4.x
+wget https://github.com/sakai135/wsl-vpnkit/releases/download/$VERSION/wsl-vpnkit.tar.gz
+tar --strip-components=1 -xf wsl-vpnkit.tar.gz usr/bin/wsl-vpnkit app/wsl-gvproxy.exe usr/bin/wsl-vm
+rm wsl-vpnkit.tar.gz
 
 # place Linux bin
 chmod +x wsl-vm
 sudo chown root:root wsl-vm
 sudo mv wsl-vm /usr/local/sbin/wsl-vm
 
-# run the wsl-vpnkit script
+# run the wsl-vpnkit script in the foreground
 chmod +x wsl-vpnkit
-sudo ./wsl-vpnkit
+sudo GVPROXY_PATH=$(pwd)/wsl-gvproxy.exe ./wsl-vpnkit
+```
+
+### Setup systemd
+
+WSL versions 0.67.6 and later [support systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support). Follow the instructions in the link to enable systemd support for your distro.
+
+Create the service file and enable the service. The `wsl-vpnkit.service` should start with your distro next time.
+```sh
+wsl.exe -d wsl-vpnkit cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
+sudo systemctl enable wsl-vpnkit.service
+
+sudo systemctl start wsl-vpnkit.service
+systemctl status wsl-vpnkit.service
+```
+
+## Notes
+
+* Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
+* Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
+
+## Build
+
+### Build the distro
+
+This will build and import the distro.
+
+```sh
+git clone https://github.com/sakai135/wsl-vpnkit.git
+cd wsl-vpnkit/
+
+./build.sh alpine
+./import.sh
+
+wsl.exe -d wsl-vpnkit wsl-vpnkit
+```
+
+Optionally you may build with `podman` instead of `docker` (default) by overriding environment variable `DOCKER`:
+```sh
+DOCKER=podman ./build.sh alpine
 ```
 
 ## Troubleshooting
@@ -112,12 +122,6 @@ This is due to the VPN blocking connections to the WSL 2 VM network interface. P
 
 For this and other networking considerations when using WSL 2, see [Accessing network applications with WSL](https://docs.microsoft.com/en-us/windows/wsl/networking).
 
-### Run in foreground
-
-```sh
-wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
-```
-
 ### Try shutting down WSL 2 VM to reset
 
 ```pwsh
@@ -129,9 +133,9 @@ kill -Name wsl-gvproxy
 
 ### Run service with debug
 
-If you set DEBUG variable before calling service you can see more debug information
+Set the DEBUG environment variable to display debug information.
 
 Example:
 ```sh
-wsl.exe -d wsl-vpnkit --cd /app DEBUG=1 service wsl-vpnkit restart
+wsl.exe -d wsl-vpnkit DEBUG=1 wsl-vpnkit
 ```

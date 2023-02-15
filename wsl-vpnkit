@@ -5,7 +5,6 @@ set -x
 # hardcoded in gvisor-tap-vsock
 VPNKIT_GATEWAY_IP="192.168.127.1"
 VPNKIT_HOST_IP="192.168.127.254"
-VPNKIT_LOCAL_IP="192.168.127.2"
 
 # overrideable with env
 GVPROXY_PATH=${GVPROXY_PATH:-/app/wsl-gvproxy.exe}
@@ -57,7 +56,7 @@ dhcp_wait () {
     d=0
     while [ "$c" -eq 1 ] && [ "$d" -eq 0 ]; do
         sleep 0.1
-        ip route show dev $TAP_NAME | grep $VPNKIT_LOCAL_IP
+        ip route show dev $TAP_NAME | grep $VPNKIT_GATEWAY_IP
         c=$?
         kill -0 $VM_PID
         d=$?
@@ -142,6 +141,7 @@ cleanup () {
 }
 
 close () {
+    echo "cleaning up..."
     cleanup
     echo "stopped wsl-vpnkit"
     kill 0
@@ -158,6 +158,7 @@ trap exit int term
 
 # run cleanup to restore any leftover configuration changes
 cleanup
+
 run
 dhcp_wait
 iptables_set A

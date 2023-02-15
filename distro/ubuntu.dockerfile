@@ -15,3 +15,4 @@ COPY --from=build /app/bin/vm /usr/bin/wsl-vm
 COPY --from=build /app/bin/gvproxy-windows.exe ./wsl-gvproxy.exe
 COPY ./distro/wsl.conf /etc/wsl.conf
 COPY ./wsl-vpnkit /usr/bin/
+COPY ./wsl-vpnkit.service ./
