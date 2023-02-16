@@ -8,16 +8,17 @@ RUN find ./bin -type f -exec sha256sum {} \;
 FROM docker.io/library/alpine:3.17.2
 RUN apk update && \
     apk upgrade && \
-    apk add iptables && \
+    apk add iproute2 iptables && \
     apk list --installed && \
     rm -rf /var/cache/apk/*
 WORKDIR /app
-COPY --from=build /app/bin/vm /usr/bin/wsl-vm
+COPY --from=build /app/bin/vm ./wsl-vm
 COPY --from=build /app/bin/gvproxy-windows.exe ./wsl-gvproxy.exe
+COPY ./wsl-vpnkit ./wsl-vpnkit.service ./
 COPY ./distro/wsl.conf /etc/wsl.conf
-COPY ./wsl-vpnkit /usr/bin/
-COPY ./wsl-vpnkit.service ./
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0
-RUN echo "$REF" > ./ref && \
+RUN find ./ -type f -exec sha256sum {} \; && \
+    ln -s /app/wsl-vpnkit /usr/bin/ && \
+    echo "$REF" > ./ref && \
     echo "$VERSION" > ./version

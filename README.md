@@ -53,48 +53,42 @@ The `wsl-vpnkit` script can be used as a normal script in your existing distro. 
 
 ```sh
 # install dependencies
-apt-get install isc-dhcp-client iproute2 iptables iputils-ping dnsutils wget
+sudo apt-get install iproute2 iptables iputils-ping dnsutils wget
 
 # download wsl-vpnkit and unpack
 VERSION=v0.4.x
 wget https://github.com/sakai135/wsl-vpnkit/releases/download/$VERSION/wsl-vpnkit.tar.gz
-tar --strip-components=1 -xf wsl-vpnkit.tar.gz usr/bin/wsl-vpnkit app/wsl-gvproxy.exe usr/bin/wsl-vm
+tar --strip-components=1 -xf wsl-vpnkit.tar.gz \
+    app/wsl-vpnkit \
+    app/wsl-gvproxy.exe \
+    app/wsl-vm \
+    app/wsl-vpnkit.service
 rm wsl-vpnkit.tar.gz
 
-# place Linux bin
-chmod +x wsl-vm
-sudo chown root:root wsl-vm
-sudo mv wsl-vm /usr/local/sbin/wsl-vm
-
 # run the wsl-vpnkit script in the foreground
-chmod +x wsl-vpnkit
-sudo GVPROXY_PATH=$(pwd)/wsl-gvproxy.exe ./wsl-vpnkit
+sudo VMEXEC_PATH=$(pwd)/wsl-vm GVPROXY_PATH=$(pwd)/wsl-gvproxy.exe ./wsl-vpnkit
 ```
 
 ### Setup systemd
 
 WSL versions 0.67.6 and later [support systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support). Follow the instructions in the link to enable systemd support for your distro.
 
-Create the service file. `wsl-vpnkit.service` is provided in the repo to work when wsl-vpnkit is setup as a distro. 
+Create the service file and enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
 
 ```sh
 # wsl-vpnkit setup as a distro
 wsl.exe -d wsl-vpnkit cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
-```
 
-If wsl-vpnkit is setup as a standalone script, please edit values in `wsl-vpnkit.service` to fit your environment.
-
-```sh
-# edit for wsl-vpnkit setup as a standalone script
+# copy and edit for wsl-vpnkit setup as a standalone script
+sudo cp ./wsl-vpnkit.service /etc/systemd/system/
 sudo nano /etc/systemd/system/wsl-vpnkit.service
-```
 
-Enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
-```sh
-sudo systemctl enable wsl-vpnkit.service
+# enable the service
+sudo systemctl enable wsl-vpnkit
 
-sudo systemctl start wsl-vpnkit.service
-systemctl status wsl-vpnkit.service
+# start and check the status of the service
+sudo systemctl start wsl-vpnkit
+systemctl status wsl-vpnkit
 ```
 
 ## Notes
@@ -104,23 +98,19 @@ systemctl status wsl-vpnkit.service
 
 ## Build
 
-### Build the distro
-
-This will build and import the distro.
 
 ```sh
-git clone https://github.com/sakai135/wsl-vpnkit.git
-cd wsl-vpnkit/
-
+# build with alpine image to ./wsl-vpnkit.tar.gz
 ./build.sh alpine
+
+# build with fedora using Podman
+DOCKER=podman ./build.sh fedora
+
+# import the built distro from ./wsl-vpnkit.tar.gz
 ./import.sh
 
+# run using the imported distro
 wsl.exe -d wsl-vpnkit wsl-vpnkit
-```
-
-Optionally you may build with `podman` instead of `docker` (default) by overriding environment variable `DOCKER`:
-```sh
-DOCKER=podman ./build.sh alpine
 ```
 
 ## Troubleshooting
@@ -129,26 +119,21 @@ DOCKER=podman ./build.sh alpine
 
 If VS Code takes a long time to open your folder in WSL, [enable the setting "Connect Through Localhost"](https://github.com/microsoft/vscode-docs/blob/main/remote-release-notes/v1_54.md#fix-for-wsl-2-connection-issues-when-behind-a-proxy).
 
-### Cannot connect to WSL 2 VM IP while connected to VPN
-
-This is due to the VPN blocking connections to the WSL 2 VM network interface. Ports on the WSL 2 VM are accessible from the Windows host using `localhost`.
-
-For this and other networking considerations when using WSL 2, see [Accessing network applications with WSL](https://docs.microsoft.com/en-us/windows/wsl/networking).
-
 ### Try shutting down WSL 2 VM to reset
 
 ```pwsh
 # PowerShell
 
+# shutdown WSL to reset networking state
 wsl --shutdown
+
+# kill any straggler wsl-gvproxy processes
 kill -Name wsl-gvproxy
 ```
 
 ### Run service with debug
 
-Set the DEBUG environment variable to display debug information.
-
-Example:
 ```sh
+# set the DEBUG environment variable
 wsl.exe -d wsl-vpnkit DEBUG=1 wsl-vpnkit
 ```
