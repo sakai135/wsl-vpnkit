@@ -2,11 +2,14 @@
 
 The `wsl-vpnkit` v0.4 script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
 
-TODO: add about upgrading from v0.3
-
-For v0.2, please see the [v0.2.x branch](https://github.com/sakai135/wsl-vpnkit/tree/v0.2.x).
+For previous versions, see [v0.3](https://github.com/sakai135/wsl-vpnkit/tree/v0.3.x) and [v0.2](https://github.com/sakai135/wsl-vpnkit/tree/v0.2.x).
 
 ## Setup
+
+Try the following troubleshooting steps from Microsoft first.
+
+* [WSL has no network connection on my work machine or in an Enterpise environment](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connection-on-my-work-machine-or-in-an-enterpise-environment)
+* [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn) 
 
 ### Setup as a distro
 
