@@ -75,9 +75,22 @@ sudo GVPROXY_PATH=$(pwd)/wsl-gvproxy.exe ./wsl-vpnkit
 
 WSL versions 0.67.6 and later [support systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support). Follow the instructions in the link to enable systemd support for your distro.
 
-Create the service file and enable the service. The `wsl-vpnkit.service` should start with your distro next time.
+Create the service file. `wsl-vpnkit.service` is provided in the repo to work when wsl-vpnkit is setup as a distro. 
+
 ```sh
+# wsl-vpnkit setup as a distro
 wsl.exe -d wsl-vpnkit cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
+```
+
+If wsl-vpnkit is setup as a standalone script, please edit values in `wsl-vpnkit.service` to fit your environment.
+
+```sh
+# edit for wsl-vpnkit setup as a standalone script
+sudo nano /etc/systemd/system/wsl-vpnkit.service
+```
+
+Enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
+```sh
 sudo systemctl enable wsl-vpnkit.service
 
 sudo systemctl start wsl-vpnkit.service
