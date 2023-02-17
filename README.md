@@ -26,8 +26,7 @@ wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
 You can also check service status to start service only if needed.
 
 ```sh
-wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit status >/dev/null || \
-wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
+wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit --ifstopped --verbose wsl-vpnkit start
 ```
 
 ### Notes
