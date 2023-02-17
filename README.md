@@ -11,6 +11,8 @@ Try the following troubleshooting steps from Microsoft first.
 * [WSL has no network connection on my work machine or in an Enterpise environment](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connection-on-my-work-machine-or-in-an-enterpise-environment)
 * [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn) 
 
+If those steps do not resolve the issue, `wsl-vpnkit` should be able to provide network connectivity.
+
 ### Setup as a distro
 
 #### Install
@@ -23,7 +25,7 @@ Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https:/
 wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 ```
 
-Start `wsl-vpnkit` from your other WSL 2 distros. This will run `wsl-vpnkit` in the foreground. 
+Run `wsl-vpnkit`. This will run `wsl-vpnkit` in the foreground.
 
 ```sh
 wsl.exe -d wsl-vpnkit wsl-vpnkit
@@ -94,11 +96,6 @@ sudo systemctl start wsl-vpnkit
 systemctl status wsl-vpnkit
 ```
 
-## Notes
-
-* Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
-* Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
-
 ## Build
 
 
@@ -117,6 +114,31 @@ wsl.exe -d wsl-vpnkit wsl-vpnkit
 ```
 
 ## Troubleshooting
+
+### Notes
+
+* Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
+* Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
+
+### Error messages from `wsl-vpnkit`
+
+#### resolv.conf has been modified without setting generateResolvConf
+
+`wsl-vpnkit` uses `/mnt/wsl/resolv.conf` to get the WSL 2 gateway IP. If modifying `/etc/resolv.conf` to set a custom DNS configuration, set [`generateResolvConf=false` in `wsl.conf`](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#network-settings).
+
+#### wsl-gvproxy.exe is not executable due to WSL interop settings or Windows permissions
+
+`wsl-vpnkit` requires that the WSL 2 distro be able to run Windows executables. This [`interop` setting](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) is enabled by default in WSL 2 and in the `wsl-vpnkit` distro.
+
+Security configurations on the Windows host may prevent executables from running. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
+
+```sh
+wsl.exe -d wsl-vpnkit GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
+```
+
+### Configuring proxies and certificates
+
+`wsl-vpnkit` currently only handles creating a network connection. Proxies and certificates must be configured separately in your distro.
 
 ### Configure VS Code Remote WSL Extension
 
