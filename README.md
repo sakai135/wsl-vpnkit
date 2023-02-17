@@ -23,7 +23,7 @@ Start `wsl-vpnkit` from your other WSL 2 distros. Add the command to your `.prof
 wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit start
 ```
 
-You can also check service status to start service only if needed.
+You can also conditionally start the service if its stopped.
 
 ```sh
 wsl.exe -d wsl-vpnkit --cd /app service wsl-vpnkit --ifstopped wsl-vpnkit start
