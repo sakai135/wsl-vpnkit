@@ -110,6 +110,7 @@ check () {
     check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 6 $CHECK_HOST $CHECK_DNS
     check_ping 6 'external host' $CHECK_HOST
+    check_https "http://$CHECK_HOST"
     check_https "https://$CHECK_HOST"
 }
 
