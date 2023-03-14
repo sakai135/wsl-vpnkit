@@ -6,6 +6,7 @@ set -x
 VPNKIT_GATEWAY_IP="192.168.127.1"
 VPNKIT_HOST_IP="192.168.127.254"
 VPNKIT_LOCAL_IP="192.168.127.2"
+TAP_MAC_ADDR="5a:94:ef:e4:0c:ee"
 
 # overrideable with env
 VMEXEC_PATH=${VMEXEC_PATH:-/app/wsl-vm}
@@ -48,11 +49,12 @@ run () {
 }
 
 wsl2tap_down () {
-    # take down WSL2 tap
-    ip link set dev $WSL2_TAP_NAME down
+    # remove WSL2 default route
+    ip route del default
 
     # setup wsl-vpnkit tap
     ip tuntap add $TAP_NAME mode tap
+    ip link set dev $TAP_NAME address $TAP_MAC_ADDR
     ip link set dev $TAP_NAME up
     ip addr add $VPNKIT_LOCAL_IP/255.255.255.0 dev $TAP_NAME
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
@@ -63,8 +65,7 @@ wsl2tap_up () {
     ip link set dev $TAP_NAME down 2>/dev/null
     ip tuntap del $TAP_NAME mode tap
 
-    # bring up WSL2 tap
-    ip link set dev $WSL2_TAP_NAME up
+    # add WSL2 default route
     ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME 2>/dev/null
 }
 
