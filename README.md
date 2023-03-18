@@ -28,7 +28,7 @@ wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.g
 Run `wsl-vpnkit`. This will run `wsl-vpnkit` in the foreground.
 
 ```sh
-wsl.exe -d wsl-vpnkit wsl-vpnkit
+wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 ```
 
 #### Update
@@ -82,7 +82,7 @@ Create the service file and enable the service. Now `wsl-vpnkit.service` should 
 
 ```sh
 # wsl-vpnkit setup as a distro
-wsl.exe -d wsl-vpnkit cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
+wsl.exe -d wsl-vpnkit --cd /app cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
 
 # copy and edit for wsl-vpnkit setup as a standalone script
 sudo cp ./wsl-vpnkit.service /etc/systemd/system/
@@ -110,7 +110,7 @@ DOCKER=podman ./build.sh fedora
 ./import.sh
 
 # run using the imported distro
-wsl.exe -d wsl-vpnkit wsl-vpnkit
+wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 ```
 
 ## Troubleshooting
@@ -133,7 +133,7 @@ wsl.exe -d wsl-vpnkit wsl-vpnkit
 Security configurations on the Windows host may prevent executables from running. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
 
 ```sh
-wsl.exe -d wsl-vpnkit GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
+wsl.exe -d wsl-vpnkit --cd /app GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
 ```
 
 ### Configuring proxies and certificates
@@ -160,5 +160,5 @@ kill -Name wsl-gvproxy
 
 ```sh
 # set the DEBUG environment variable
-wsl.exe -d wsl-vpnkit DEBUG=1 wsl-vpnkit
+wsl.exe -d wsl-vpnkit --cd /app DEBUG=1 wsl-vpnkit
 ```
