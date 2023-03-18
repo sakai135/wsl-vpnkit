@@ -6,12 +6,9 @@ For previous versions, see [v0.3](https://github.com/sakai135/wsl-vpnkit/tree/v0
 
 ## Setup
 
-Try the following troubleshooting steps from Microsoft first.
+Before setting up `wsl-vpnkit`, check if a DNS server change may be enough to get connectivity by pinging a public IP address from WSL 2. If that works, follow the steps in [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn).
 
-* [WSL has no network connection on my work machine or in an Enterpise environment](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connection-on-my-work-machine-or-in-an-enterpise-environment)
-* [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn) 
-
-If those steps do not resolve the issue, `wsl-vpnkit` should be able to provide network connectivity.
+`wsl-vpnkit` is intended to help when more than a DNS server change is needed.
 
 ### Setup as a distro
 
