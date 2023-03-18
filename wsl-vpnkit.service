@@ -1,0 +1,17 @@
+[Unit]
+Description=wsl-vpnkit
+After=network.target
+
+[Service]
+# for wsl-vpnkit setup as a distro
+ExecStart=/mnt/c/Windows/system32/wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
+
+# for wsl-vpnkit setup as a standalone script
+#ExecStart=/full/path/to/wsl-vpnkit
+#Environment=VMEXEC_PATH=/full/path/to/wsl-vm GVPROXY_PATH=/full/path/to/wsl-gvproxy.exe
+
+Restart=always
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

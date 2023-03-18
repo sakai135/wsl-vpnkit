@@ -1,115 +1,82 @@
 #!/bin/sh
 
-CMDSHELL="$(command -v cmd.exe || echo '/mnt/c/Windows/system32/cmd.exe')"
-USERPROFILE=$(wslpath "$($CMDSHELL /d /v:off /c 'echo | set /p t=%USERPROFILE%' 2>/dev/null)")
-WSL2_GATEWAY_IP="$(cat /etc/resolv.conf | awk '/^nameserver/ {print $2}')"
-WSL2_VM_IP="$(ifconfig eth0 | awk '/inet /{print substr($2, 6)}')"
-WSL2_TAP_NAME=eth0
-WIN_STORE="/files"
-WIN_PATH="$USERPROFILE/wsl-vpnkit"
-CONF_PATH="$WIN_PATH/wsl-vpnkit.conf"
-GVPROXY_PATH="$WIN_PATH/wsl-gvproxy.exe"
-VM_PID=
+set -x
 
-echo "starting wsl-vpnkit"
+# hardcoded in gvisor-tap-vsock
+VPNKIT_GATEWAY_IP="192.168.127.1"
+VPNKIT_HOST_IP="192.168.127.254"
+VPNKIT_LOCAL_IP="192.168.127.2"
+TAP_MAC_ADDR="5a:94:ef:e4:0c:ee"
 
-# Load defaults
-if [ -f "/app/defaults.conf" ]; then
-  . /app/defaults.conf
-fi
-#  Load user config if needed
-if [ -f "$CONF_PATH" ]; then
-  . "$CONF_PATH"
-  echo "loaded config: $CONF_PATH"
-fi
-
-# Failsafe configuration to run as a standalone script
-TAP_NAME=${TAP_NAME:-eth1}
-VPNKIT_SUBNET=${VPNKIT_SUBNET:-192.168.67.0/24}
-VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.67.1}
-VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.67.2}
-VPNKIT_LOWEST_IP=${VPNKIT_LOWEST_IP:-192.168.67.3}
-DNS_IP=${DNS_IP:-192.168.67.1}
-VPNKIT_DEBUG=${VPNKIT_DEBUG:-false}
-CHECK_DNS=${CHECK_DNS:-1.1.1.1}
+# overrideable with env
+VMEXEC_PATH=${VMEXEC_PATH:-/app/wsl-vm}
+GVPROXY_PATH=${GVPROXY_PATH:-/app/wsl-gvproxy.exe}
+TAP_NAME=${TAP_NAME:-wsltap}
 CHECK_HOST=${CHECK_HOST:-example.com}
+CHECK_DNS=${CHECK_DNS:-1.1.1.1}
+DEBUG=${DEBUG:-0}
 
-hash () {
-    md5sum "$1" | awk '{ print $1 }'
-}
+set +x
 
-install_file () {
-    FILE_STORE="$WIN_STORE/$1"
-    FILE_PATH="$2"
-    if [ -f "$FILE_STORE" ]; then
-        if [ ! -f "$FILE_PATH" ]; then
-            mkdir -p "$(dirname "$FILE_PATH")"
-            cp "$FILE_STORE" "$FILE_PATH"
-            echo "copied $1 to $FILE_PATH"
-        else
-            echo "$1 exists at $FILE_PATH"
-            if [ `hash "$FILE_STORE"` != `hash "$FILE_PATH"` ]; then
-                cp -f "$FILE_STORE" "$FILE_PATH"
-                echo "updated $1 at $FILE_PATH"
-            fi
-        fi
-    fi
-    if [ ! -f "$FILE_PATH" ]; then
-        echo "$1 not found at $FILE_PATH"
-        exit 1
-    fi
-}
+# WSL2 default values
+WSL2_TAP_NAME="eth0"
+WSL2_RESOLVCONF="/mnt/wsl/resolv.conf"
+WSL2_GATEWAY_IP="$(cat $WSL2_RESOLVCONF | awk '/^nameserver/ {print $2}')"
 
-install () {
-    install_file wsl-gvproxy.exe "$GVPROXY_PATH"
-}
+set -x
+
+# show values
+WSL2_TAP_NAME=$WSL2_TAP_NAME
+WSL2_GATEWAY_IP=$WSL2_GATEWAY_IP
+
+if [ "$DEBUG" -eq 0 ]; then
+    set +x
+fi
+
+# replace calls to iptables if iptables-legacy exists
+command -v iptables-legacy >/dev/null && alias iptables=iptables-legacy
 
 run () {
-    echo "starting gvproxy at $GVPROXY_PATH..."
-    wsl-vm \
-        -path "$GVPROXY_PATH" \
-        -iface "$TAP_NAME" \
-        -subnet "$VPNKIT_SUBNET" \
-        -gateway-ip "$VPNKIT_GATEWAY_IP" \
-        -host-ip "$VPNKIT_HOST_IP" \
-        -vm-ip "$VPNKIT_LOWEST_IP" \
-        -debug="$VPNKIT_DEBUG" &
-    VM_PID=$!
-    echo "started gvproxy"
+    echo "starting vm and gvproxy..."
+    $VMEXEC_PATH \
+        -url="stdio:$GVPROXY_PATH?listen-stdio=accept&debug=$DEBUG" \
+        -iface="$TAP_NAME" \
+        -stop-if-exist="" \
+        -preexisting=1 \
+        -debug=$DEBUG &
+    sleep 1 # wait to establish connection
+    echo "started vm and gvproxy"
 }
 
-tap_wait () {
-    echo "waiting for dhcp..."
-    c=1
-    d=0
-    while [ "$c" -eq 1 ] && [ "$d" -eq 0 ]; do
-        sleep 0.1
-        ip route | grep "default via .* dev $TAP_NAME"
-        c=$?
-        kill -0 $VM_PID
-        d=$?
-    done
-    if [ "$d" -eq 1 ]; then
-        echo "wsl-vm exited"
-        exit 1
-    fi
-    echo "dhcp completed"
+wsl2tap_down () {
+    # remove WSL2 default route
+    ip route del default
+
+    # setup wsl-vpnkit tap
+    ip tuntap add $TAP_NAME mode tap
+    ip link set dev $TAP_NAME address $TAP_MAC_ADDR
+    ip link set dev $TAP_NAME up
+    ip addr add $VPNKIT_LOCAL_IP/255.255.255.0 dev $TAP_NAME
+    ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
 }
 
-ipconfig () {
-    echo "removing WSL 2 ip route..."
-    ip route | grep -e "$WSL2_GATEWAY_IP" | tr '\n' '\0' | xargs -0 -n 1 sh -c 'ip route del $1' argv0
-    echo "removed WSL 2 ip route"
+wsl2tap_up () {
+    # take down wsl-vpnkit tap
+    ip link set dev $TAP_NAME down 2>/dev/null
+    ip tuntap del $TAP_NAME mode tap
 
-    echo "adding rules to iptables..."
-    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $DNS_IP:53
-    iptables -t nat -A OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
-    iptables -t nat -A POSTROUTING -o $TAP_NAME -j MASQUERADE
-    echo "iptables done"
+    # add WSL2 default route
+    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME 2>/dev/null
+}
+
+iptables_set () {
+    iptables -t nat -$1 PREROUTING -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 PREROUTING -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 PREROUTING -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -$1 OUTPUT -d $WSL2_GATEWAY_IP/32 -p udp -m udp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 OUTPUT -d $WSL2_GATEWAY_IP/32 -p tcp -m tcp --dport 53 -j DNAT --to-destination $VPNKIT_GATEWAY_IP:53
+    iptables -t nat -$1 OUTPUT -d $WSL2_GATEWAY_IP/32 -j DNAT --to-destination $VPNKIT_HOST_IP
+    iptables -t nat -$1 POSTROUTING -o $TAP_NAME -j MASQUERADE
 }
 
 check_ping () {
@@ -135,34 +102,26 @@ check () {
     check_ping 4 'WSL 2 gateway / Windows host' $WSL2_GATEWAY_IP
     check_ping 4 'Windows host' $VPNKIT_HOST_IP
     check_ping 4 'gateway' $VPNKIT_GATEWAY_IP
-    check_dns 4 $CHECK_HOST $DNS_IP
     check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 4 $CHECK_HOST $CHECK_DNS
-    check_ping 4 'external host' $CHECK_HOST
-    check_dns 6 $CHECK_HOST $DNS_IP
+    check_ping 4 'external host domain' $CHECK_HOST
+    check_ping 4 'external host IP' $CHECK_DNS
     check_dns 6 $CHECK_HOST $VPNKIT_GATEWAY_IP
     check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
     check_dns 6 $CHECK_HOST $CHECK_DNS
     check_ping 6 'external host' $CHECK_HOST
+    check_https "http://$CHECK_HOST"
     check_https "https://$CHECK_HOST"
 }
 
 cleanup () {
-    echo "cleaning up iptables..."
-    iptables -t nat -S | grep $VPNKIT_GATEWAY_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $VPNKIT_HOST_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $TAP_NAME | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    iptables -t nat -S | grep $DNS_IP | cut -d " " -f 2- | tr '\n' '\0' | xargs -0 -r -n 1 sh -c 'iptables -t nat -D $1' argv0
-    echo "iptables cleanup done"
-
-    echo "restoring WSL 2 ip route..."
-    ip addr add $WSL2_VM_IP/255.255.255.0 dev $WSL2_TAP_NAME
-    ip route add default via $WSL2_GATEWAY_IP dev $WSL2_TAP_NAME
-    echo "restored WSL 2 ip route"
+    iptables_set D 2>/dev/null
+    wsl2tap_up
 }
 
 close () {
+    echo "cleaning up..."
     cleanup
     echo "stopped wsl-vpnkit"
     kill 0
@@ -172,13 +131,34 @@ if [ ${EUID:-$(id -u)} -ne 0 ]; then
     echo "Please run this script as root"
     exit 1
 fi
+if [ ! -f "$VMEXEC_PATH" ]; then
+    echo "VMEXEC_PATH [$VMEXEC_PATH] does not exist"
+    exit 1
+fi
+if [ ! -f "$GVPROXY_PATH" ]; then
+    echo "GVPROXY_PATH [$GVPROXY_PATH] does not exist"
+    exit 1
+fi
+cat $WSL2_RESOLVCONF | grep "automatically generated by WSL" >/dev/null
+if [ $? -eq 1 ]; then
+    echo "resolv.conf has been modified without setting generateResolvConf"
+    exit 1
+fi
+$GVPROXY_PATH -help 2>/dev/null
+if [ $? -eq 1 ]; then
+    echo "$GVPROXY_PATH is not executable due to WSL interop settings or Windows permissions"
+    exit 1
+fi
 
-cleanup
-install
-run
-tap_wait
-ipconfig
-check
+# trap first so close runs even if the rest of the commands fail
 trap close exit
 trap exit int term
+
+# run cleanup to restore any leftover configuration changes
+cleanup
+
+wsl2tap_down
+run
+iptables_set A
+check
 wait

@@ -19,7 +19,7 @@ jobs:
 
     - name: Build
       run: |
-        docker build -t $TAG_NAME -f ./distro/Dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
+        docker build -t $TAG_NAME -f ./distro/alpine.dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
 
     - uses: anchore/scan-action@v3
       with:
