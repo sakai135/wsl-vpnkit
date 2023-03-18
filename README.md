@@ -133,6 +133,10 @@ wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 Security configurations on the Windows host may prevent executables from running. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
 
 ```sh
+# enable [automount] in wsl.conf for wsl-vpnkit distro
+wsl.exe -d wsl-vpnkit --cd /app sed -i -- "s/enabled=false/enabled=true/" /etc/wsl.conf
+
+# set GVPROXY_PATH when running wsl-vpnkit
 wsl.exe -d wsl-vpnkit --cd /app GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
 ```
 
