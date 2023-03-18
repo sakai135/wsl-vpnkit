@@ -6,12 +6,9 @@ For previous versions, see [v0.3](https://github.com/sakai135/wsl-vpnkit/tree/v0
 
 ## Setup
 
-Try the following troubleshooting steps from Microsoft first.
+Before setting up `wsl-vpnkit`, check if a DNS server change may be enough to get connectivity by pinging a public IP address from WSL 2. If that works, follow the steps in [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn).
 
-* [WSL has no network connection on my work machine or in an Enterpise environment](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connection-on-my-work-machine-or-in-an-enterpise-environment)
-* [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn) 
-
-If those steps do not resolve the issue, `wsl-vpnkit` should be able to provide network connectivity.
+`wsl-vpnkit` is intended to help when more than a DNS server change is needed.
 
 ### Setup as a distro
 
@@ -130,9 +127,13 @@ wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 
 `wsl-vpnkit` requires that the WSL 2 distro be able to run Windows executables. This [`interop` setting](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) is enabled by default in WSL 2 and in the `wsl-vpnkit` distro.
 
-Security configurations on the Windows host may prevent executables from running. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
+Security configurations on the Windows host may only permit running executables in certain directories. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
 
 ```sh
+# enable [automount] in wsl.conf for wsl-vpnkit distro
+wsl.exe -d wsl-vpnkit --cd /app sed -i -- "s/enabled=false/enabled=true/" /etc/wsl.conf
+
+# set GVPROXY_PATH when running wsl-vpnkit
 wsl.exe -d wsl-vpnkit --cd /app GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
 ```
 
