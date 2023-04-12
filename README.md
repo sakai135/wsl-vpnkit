@@ -78,12 +78,8 @@ WSL versions 0.67.6 and later [support systemd](https://learn.microsoft.com/en-u
 Create the service file and enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
 
 ```sh
-# wsl-vpnkit setup as a distro
+# create the service
 wsl.exe -d wsl-vpnkit --cd /app cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
-
-# copy and edit for wsl-vpnkit setup as a standalone script
-sudo cp ./wsl-vpnkit.service /etc/systemd/system/
-sudo nano /etc/systemd/system/wsl-vpnkit.service
 
 # enable the service
 sudo systemctl enable wsl-vpnkit
