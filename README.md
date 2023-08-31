@@ -82,8 +82,7 @@ Create the service file and enable the service. Now `wsl-vpnkit.service` should 
 wsl.exe -d wsl-vpnkit --cd /app cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
 
 # copy and edit for wsl-vpnkit setup as a standalone script
-sudo cp ./wsl-vpnkit.service /etc/systemd/system/
-sudo nano /etc/systemd/system/wsl-vpnkit.service
+sudo ${EDITOR:-nano} /etc/systemd/system/wsl-vpnkit.service
 
 # enable the service
 sudo systemctl enable wsl-vpnkit
