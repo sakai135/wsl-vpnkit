@@ -19,8 +19,12 @@ Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https:/
 ```pwsh
 # PowerShell
 
-wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
+wsl --import wsl-vpnkit "$env:USERPROFILE\wsl-vpnkit" "$env:USERPROFILE\Downloads\wsl-vpnkit.tar.gz" --version 2
 ```
+
+You should see:
+
+![progress](https://github.com/sakai135/wsl-vpnkit/assets/5055400/2c3fee06-60bd-467e-9018-b77dc0e11e25)
 
 Run `wsl-vpnkit`. This will run `wsl-vpnkit` in the foreground.
 
@@ -36,7 +40,7 @@ To update, unregister the existing distro and import the new version.
 # PowerShell
 
 wsl --unregister wsl-vpnkit
-wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
+wsl --import wsl-vpnkit "$env:USERPROFILE\wsl-vpnkit" "$env:USERPROFILE\Downloads\wsl-vpnkit.tar.gz" --version 2
 ```
 
 #### Uninstall
