@@ -1,39 +1,85 @@
 # wsl-vpnkit
 
-The `wsl-vpnkit` v0.4 script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) to provide network connectivity to the WSL 2 VM while connected to VPNs on the Windows host. This requires no settings changes or admin privileges on the Windows host.
+The `wsl-vpnkit` provides network connectivity to WSL 2 VM's while connected to a VPN on the Windows host. No admin privileges or setting changes are required.
 
-For previous versions, see [v0.3](https://github.com/sakai135/wsl-vpnkit/tree/v0.3.x) and [v0.2](https://github.com/sakai135/wsl-vpnkit/tree/v0.2.x).
+The script uses [gvisor-tap-vsock](https://github.com/containers/gvisor-tap-vsock) under the hood.
 
-## Setup
+## Previous Versions
+
+For previous versions see:
+
+[v0.3](https://github.com/sakai135/wsl-vpnkit/tree/v0.3.x)
+
+[v0.2](https://github.com/sakai135/wsl-vpnkit/tree/v0.2.x)
+
+## Before Installing
 
 Before setting up `wsl-vpnkit`, check if a DNS server change may be enough to get connectivity by pinging a public IP address from WSL 2. If that works, follow the steps in [WSL has no network connectivity once connected to a VPN](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#wsl-has-no-network-connectivity-once-connected-to-a-vpn).
 
 `wsl-vpnkit` is intended to help when more than a DNS server change is needed.
 
-### Setup as a distro
+## Installation
 
-#### Install
+There are two primary ways to install `wsl-vpnkit`. Either as a WSL Distribution or as a standalone script within an existing WSL VM.
 
-Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and import the distro into WSL 2. 
+### As a WSL Distribution
 
-```pwsh
-# PowerShell
+Download the prebuilt file `wsl-vpnkit.tar.gz` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest)
+
+Import the archive as a WSL 2 Distro:
+
+```powershell
+# PowerShell on Windows host
+
+# Make sure to navigate to the directory containing wsl-vpnkit.tar.gz
 
 wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
 ```
 
-Run `wsl-vpnkit`. This will run `wsl-vpnkit` in the foreground.
+To check if the import was successful you can run the new `wsl-vpnkit` vm in the foreground:
+
+```powershell
+# PowerShell on Windows host
+
+wsl -d wsl-vpnkit --cd /app wsl-vpnkit
+```
+
+#### Add as a Service to Existing WSL VM's Using Systemd
+
+Systemd is enabled by default in newer WSL versions. Should you be working with an older VM you might have to enable it manually. See: [support systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support)
 
 ```sh
-wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
+# In WSL2 distro lacking network connectivity
+
+# If you are uncertain if systemd is enabled you can check with:
+ps -p 1 -o comm=
+# output should be: systemd
 ```
+
+To enable `wsl-vpnkit` as a service in an existing WSL2 Distribution (for example Ubuntu) follow these steps:
+
+```sh
+# In WSL2 Distro lacking network connectivity
+
+#Copy systemd service definition from wsl-vpnkit
+wsl.exe -d wsl-vpnkit --cd /app cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
+
+# enable the service
+sudo systemctl enable wsl-vpnkit
+
+# start and check the status of the service
+sudo systemctl start wsl-vpnkit
+systemctl status wsl-vpnkit
+```
+
+At this point the installation should be fully operational. `wsl-vpnkit` should start with your WSL 2 VM and there should be notwork connectivity.
 
 #### Update
 
-To update, unregister the existing distro and import the new version.
+To update you version of `wsl-vpnkit` you can just remove the current distro and import the updated version:
 
-```pwsh
-# PowerShell
+```powershell
+# PowerShell on Windows host
 
 wsl --unregister wsl-vpnkit
 wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.gz
@@ -41,19 +87,21 @@ wsl --import wsl-vpnkit --version 2 $env:USERPROFILE\wsl-vpnkit wsl-vpnkit.tar.g
 
 #### Uninstall
 
-To uninstall, unregister the distro.
+To uninstall just unregister the distro:
 
-```pwsh
-# PowerShell
+```powershell
+# PowerShell on Windows host
 
 wsl --unregister wsl-vpnkit
 ```
 
-### Setup as a standalone script
+### As a Standalone Script
 
 The `wsl-vpnkit` script can be used as a normal script in your existing distro. This is an example setup script for Ubuntu.
 
 ```sh
+# In existing Ubuntu VM
+
 # install dependencies
 sudo apt-get install iproute2 iptables iputils-ping dnsutils wget
 
@@ -67,22 +115,21 @@ tar --strip-components=1 -xf wsl-vpnkit.tar.gz \
     app/wsl-vpnkit.service
 rm wsl-vpnkit.tar.gz
 
-# run the wsl-vpnkit script in the foreground
+# run the wsl-vpnkit script manually
 sudo VMEXEC_PATH=$(pwd)/wsl-vm GVPROXY_PATH=$(pwd)/wsl-gvproxy.exe ./wsl-vpnkit
 ```
 
-### Setup systemd
-
-WSL versions 0.67.6 and later [support systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support). Follow the instructions in the link to enable systemd support for your distro.
-
-Create the service file and enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
+#### Add as a Systemd Service
 
 ```sh
-# wsl-vpnkit setup as a distro
-wsl.exe -d wsl-vpnkit --cd /app cat /app/wsl-vpnkit.service | sudo tee /etc/systemd/system/wsl-vpnkit.service
+# In existing Ubuntu VM
 
-# copy and edit for wsl-vpnkit setup as a standalone script
+# Copy the service definition
 sudo cp ./wsl-vpnkit.service /etc/systemd/system/
+
+# Edit the service file,
+# Remove distro ExecStart and uncomment the indicated lines for standalone script.
+# Update the file paths as appropriate.
 sudo nano /etc/systemd/system/wsl-vpnkit.service
 
 # enable the service
@@ -93,8 +140,9 @@ sudo systemctl start wsl-vpnkit
 systemctl status wsl-vpnkit
 ```
 
-## Build
+At this point the installation should be fully operational. `wsl-vpnkit` should start with your WSL 2 VM and there should be notwork connectivity.
 
+## Build
 
 ```sh
 # build with alpine image to ./wsl-vpnkit.tar.gz
@@ -114,8 +162,8 @@ wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 
 ### Notes
 
-* Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
-* Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
+- Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
+- Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
 
 ### Error messages from `wsl-vpnkit`
 
