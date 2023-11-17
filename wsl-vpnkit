@@ -27,12 +27,14 @@ fi
 WSL2_RESOLVCONF=${WSL2_RESOLVCONF:-$WSL2_RESOLVCONF_DEFAULT}
 WSL2_GATEWAY_IP_FROM_RESOLVCONF="$(cat $WSL2_RESOLVCONF | awk '/^nameserver/ {print $2}')"
 WSL2_GATEWAY_IP=${WSL2_GATEWAY_IP:-$WSL2_GATEWAY_IP_FROM_RESOLVCONF}
+export WSL_INTEROP=${WSL_INTEROP:-"/run/WSL/$(ls /run/WSL | sort -n | tail -n 1)"}
 
 set -x
 
 # show values
 WSL2_TAP_NAME=$WSL2_TAP_NAME
 WSL2_GATEWAY_IP=$WSL2_GATEWAY_IP
+WSL_INTEROP=$WSL_INTEROP
 
 if [ "$DEBUG" -eq 0 ]; then
     set +x
@@ -120,6 +122,32 @@ check () {
     check_https "https://$CHECK_HOST"
 }
 
+start () {
+    # run cleanup to restore any leftover configuration changes
+    cleanup
+    wsl2tap_down
+    run
+    iptables_set A
+    check
+}
+
+monitor () {
+    while true
+    do
+        if ss -elx | grep -q $WSL_INTEROP; then
+            : #everything is going well, socket still valid, no action to do
+        else
+            echo "Something is going bad, socket $WSL_INTEROP broken, trying to repair..."
+            echo "killing all subprcesses from this wsl-vpnkit-script"
+            pstree -A -p $$ | grep -Eow "[0-9]+" | tail -n +2 | xargs kill
+            echo "setting new Interop-variable"
+            export WSL_INTEROP="/run/WSL/$(ls /run/WSL | sort -n | tail -n 1)"
+            start
+        fi
+        sleep 1
+    done
+}
+
 cleanup () {
     iptables_set D 2>/dev/null
     wsl2tap_up
@@ -158,11 +186,5 @@ fi
 trap close exit
 trap exit int term
 
-# run cleanup to restore any leftover configuration changes
-cleanup
-
-wsl2tap_down
-run
-iptables_set A
-check
-wait
+start
+monitor

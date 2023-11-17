@@ -1,8 +1,9 @@
 [Unit]
 Description=wsl-vpnkit
-After=network.target
 
 [Service]
+# Run as one of last services to start up
+Type=idle
 # for wsl-vpnkit setup as a distro
 ExecStart=/mnt/c/Windows/system32/wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 
