@@ -45,6 +45,7 @@ command -v iptables-legacy >/dev/null && alias iptables=iptables-legacy
 
 run () {
     echo "starting vm and gvproxy..."
+    printenv
     $VMEXEC_PATH \
         -url="stdio:$GVPROXY_PATH?listen-stdio=accept&debug=$DEBUG" \
         -iface="$TAP_NAME" \
@@ -134,12 +135,13 @@ start () {
 monitor () {
     while true
     do
-        if ss -elx | grep -q $WSL_INTEROP; then
+        if ss -elx | grep -q $WSL_INTEROP &&
+           [ $WSL_INTEROP = "/run/WSL/$(ls /run/WSL | sort -n | tail -n 1)" ]; then
             : #everything is going well, socket still valid, no action to do
         else
             echo "Something is going bad, socket $WSL_INTEROP broken, trying to repair..."
             echo "killing all subprcesses from this wsl-vpnkit-script"
-            pstree -A -p $$ | grep -Eow "[0-9]+" | tail -n +2 | xargs kill
+            pstree -p $$ | grep -Eow "[0-9]+" | tail -n +2 | xargs kill
             echo "setting new Interop-variable"
             export WSL_INTEROP="/run/WSL/$(ls /run/WSL | sort -n | tail -n 1)"
             start
