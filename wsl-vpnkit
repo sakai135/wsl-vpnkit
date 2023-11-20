@@ -45,7 +45,6 @@ command -v iptables-legacy >/dev/null && alias iptables=iptables-legacy
 
 run () {
     echo "starting vm and gvproxy..."
-    printenv
     $VMEXEC_PATH \
         -url="stdio:$GVPROXY_PATH?listen-stdio=accept&debug=$DEBUG" \
         -iface="$TAP_NAME" \
