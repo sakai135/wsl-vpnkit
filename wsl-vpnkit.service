@@ -4,13 +4,16 @@ After=network.target
 
 [Service]
 # for wsl-vpnkit setup as a distro
-ExecStart=/mnt/c/Windows/system32/wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
+# No longer supported in 0.4.1
+# ExecStart=/mnt/c/Windows/system32/wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 
 # for wsl-vpnkit setup as a standalone script
-#ExecStart=/full/path/to/wsl-vpnkit
-#Environment=VMEXEC_PATH=/full/path/to/wsl-vm GVPROXY_PATH=/full/path/to/wsl-gvproxy.exe
+# GVPROXY_PATH must point to /mnt directory to work!!!
+ExecStart=/home/hosermage/wsl-vpnkit/wsl-vpnkit
+Environment=VMEXEC_PATH=/home/hosermage/wsl-vpnkit/wsl-vm GVPROXY_PATH=/mnt/c/bin/wsl-vpnkit/wsl-gvproxy.exe
 
 Restart=always
+RestartSec=5
 KillMode=mixed
 
 [Install]
