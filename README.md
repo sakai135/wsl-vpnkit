@@ -130,12 +130,14 @@ On older WSL versions where `/mnt/wsl/resolv.conf` is not available, `wsl-vpnkit
 `wsl-vpnkit` requires that the WSL 2 distro be able to run Windows executables. This [`interop` setting](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) is enabled by default in WSL 2 and in the `wsl-vpnkit` distro.
 
 Security configurations on the Windows host may only permit running executables in certain directories. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
+`GVPROXY_PATH` must point to a /mnt folder for wsl-gvproxy.exe to work!
 
 ```sh
 # enable [automount] in wsl.conf for wsl-vpnkit distro
+# Please be sure the [automount] section exists
 wsl.exe -d wsl-vpnkit --cd /app sed -i -- "s/enabled=false/enabled=true/" /etc/wsl.conf
 
-# set GVPROXY_PATH when running wsl-vpnkit
+# set GVPROXY_PATH when running wsl-vpnkit to a /mnt directory (it must reside on windows host filesystem)
 wsl.exe -d wsl-vpnkit --cd /app GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
 ```
 
