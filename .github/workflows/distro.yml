@@ -7,35 +7,67 @@ on:
 env:
   TAG_NAME: ${{ format('wslvpnkit:{0}-{1}', github.sha, github.run_number) }}
   RUN_URL: ${{ format('{0}/{1}/actions/runs/{2}/attempts/{3}', github.server_url, github.repository, github.run_id, github.run_attempt) }}
-  DOCKLE_HOST: "unix:///var/run/docker.sock" # https://github.com/Azure/container-scan/issues/146
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     permissions:
       checks: write
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Build
-      run: |
-        docker build -t $TAG_NAME -f ./distro/alpine.dockerfile --build-arg REF=$RUN_URL --build-arg VERSION=${GITHUB_REF#refs/tags/} .
-
-    - uses: anchore/scan-action@v3
+    - uses: docker/setup-docker-action@v5
       with:
-        image: ${{ env.TAG_NAME }}
+        daemon-config: |
+          {
+            "debug": true,
+            "features": {
+              "containerd-snapshotter": true
+            }
+          }
+    - uses: docker/setup-qemu-action@v4
+    - uses: docker/setup-buildx-action@v4
+    - uses: actions/checkout@v7
 
-    - name: Package
-      run: |
-        CONTAINER_ID=$(docker create $TAG_NAME)
-        docker export $CONTAINER_ID | gzip > wsl-vpnkit.tar.gz
-        sha256sum wsl-vpnkit.tar.gz | tee wsl-vpnkit.tar.gz.sha256
-        ls -la wsl-vpnkit.tar.gz
-
-    - name: Artifacts
-      uses: actions/upload-artifact@v3
+    - uses: docker/build-push-action@v7
       with:
-        name: wsl-vpnkit
+        context: .
+        file: ./distro/alpine.dockerfile
+        platforms: linux/arm64,linux/amd64
+        push: false
+        load: true
+        tags: ${{ env.TAG_NAME }}
+        build-args: |
+          REF=${{ env.RUN_URL }}
+          VERSION=${GITHUB_REF#refs/tags/}
+
+    - name: export amd64
+      run: |
+        CONTAINER_ID=$(docker create --platform linux/amd64 ${{ env.TAG_NAME }})
+        docker export $CONTAINER_ID | gzip > wsl-vpnkit-amd64.wsl
+        sha256sum wsl-vpnkit-amd64.wsl | tee wsl-vpnkit-amd64.wsl.sha256
+        ls -la wsl-vpnkit-amd64.wsl
+    - name: export arm64
+      run: |
+        CONTAINER_ID=$(docker create --platform linux/arm64 ${{ env.TAG_NAME }})
+        docker export $CONTAINER_ID | gzip > wsl-vpnkit-arm64.wsl
+        sha256sum wsl-vpnkit-arm64.wsl | tee wsl-vpnkit-arm64.wsl.sha256
+        ls -la wsl-vpnkit-arm64.wsl
+
+    - uses: actions/upload-artifact@v7
+      with:
         path: |
-          wsl-vpnkit.tar.gz
-          wsl-vpnkit.tar.gz.sha256
+          wsl-vpnkit-amd64.wsl
+          wsl-vpnkit-amd64.wsl.sha256
+          wsl-vpnkit-arm64.wsl
+          wsl-vpnkit-arm64.wsl.sha256
+
+    - uses: softprops/action-gh-release@v3
+      if: github.ref_type == 'tag'
+      with:
+        prerelease: true
+        draft: true
+        generate_release_notes: true
+        files: |
+          wsl-vpnkit-amd64.wsl
+          wsl-vpnkit-amd64.wsl.sha256
+          wsl-vpnkit-arm64.wsl
+          wsl-vpnkit-arm64.wsl.sha256

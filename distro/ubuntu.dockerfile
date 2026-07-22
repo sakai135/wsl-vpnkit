@@ -1,18 +1,31 @@
-FROM docker.io/library/alpine:3.17.2 as gvisor-tap-vsock
-WORKDIR /app/bin
-RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.6.1/gvproxy-windows.exe && \
-    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.6.1/vm && \
-    chmod +x ./gvproxy-windows.exe ./vm
+FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.26.5 AS gvisor-tap-vsock-arm64
+WORKDIR /app
+RUN git clone --depth 1 --branch v0.8.9 https://github.com/containers/gvisor-tap-vsock.git . && \
+    GOARCH=arm64 make vm && \
+    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvproxy-windows-arm64.exe && \
+    mv ./gvproxy-windows-arm64.exe ./bin/gvproxy-windows.exe && \
+    chmod +x ./bin/gvproxy-windows.exe ./bin/gvforwarder
+
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.1 AS gvisor-tap-vsock
+WORKDIR /app/bin/amd64
+RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvproxy-windows.exe && \
+    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvforwarder && \
+    chmod +x ./gvproxy-windows.exe ./gvforwarder
+RUN find . -type f -exec sha256sum {} \;
+WORKDIR /app/bin/arm64
+COPY --from=gvisor-tap-vsock-arm64 /app/bin/gvproxy-windows.exe ./
+COPY --from=gvisor-tap-vsock-arm64 /app/bin/gvforwarder ./
 RUN find . -type f -exec sha256sum {} \;
 
-FROM docker.io/library/ubuntu:22.04
+FROM docker.io/library/ubuntu:26.04
+ARG TARGETARCH
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y iproute2 iptables iputils-ping dnsutils wget && \
     apt-get clean
 WORKDIR /app
-COPY --from=gvisor-tap-vsock /app/bin/vm ./wsl-vm
-COPY --from=gvisor-tap-vsock /app/bin/gvproxy-windows.exe ./wsl-gvproxy.exe
+COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm
+COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvproxy-windows.exe ./wsl-gvproxy.exe
 COPY ./wsl-vpnkit ./wsl-vpnkit.service ./
-COPY ./distro/wsl.conf /etc/wsl.conf
-RUN ln -s /app/wsl-vpnkit /usr/bin/
+COPY ./distro/wsl.conf ./distro/wsl-distribution.conf ./distro/wsl-oobe.sh /etc/
+RUN ln -s /app/wsl-vpnkit /app/wsl-vm /app/wsl-gvproxy.exe /usr/local/bin/
