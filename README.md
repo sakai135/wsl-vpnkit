@@ -128,6 +128,12 @@ On older WSL versions where `/mnt/wsl/resolv.conf` is not available, `wsl-vpnkit
 #### wsl-gvproxy.exe is not executable due to WSL interop settings or Windows permissions
 
 `wsl-vpnkit` requires that the WSL 2 distro be able to run Windows executables. This [`interop` setting](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) is enabled by default in WSL 2 and in the `wsl-vpnkit` distro.
+* To resolve `cannot execute binary file: Exec format error`, please check for the existence of this file: `/usr/lib/binfmt.d/WSLInterop.conf`
+  * If the file is not found, run this to generate it and restart the related service:
+    ```
+    sudo sh -c 'echo :WSLInterop:M::MZ::/init:PF > /usr/lib/binfmt.d/WSLInterop.conf'
+    sudo systemctl restart systemd-binfmt
+    ```
 
 Security configurations on the Windows host may only permit running executables in certain directories. You can copy `wsl-gvproxy.exe` to an appropriate location and use the `GVPROXY_PATH` environment variable to specify the location.
 
