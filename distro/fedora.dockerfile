@@ -20,7 +20,7 @@ RUN find . -type f -exec sha256sum {} \;
 FROM docker.io/library/fedora:44
 ARG TARGETARCH
 RUN dnf upgrade -y && \
-    dnf install -y iproute iptables-legacy iputils bind-utils wget && \
+    dnf install -y iproute iptables-legacy iputils bind-utils wget jq && \
     dnf clean all
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm
