@@ -1,6 +1,13 @@
-.git
-.github
-.dockerignore
-distro/Dockerfile
-README.md
-distro/test.sh
+# Ignore everything by default.
+**
+
+# Keep Docker build definitions and copied runtime files.
+!.dockerignore
+!wsl-vpnkit
+!wsl-vpnkit.service
+!distro/alpine.dockerfile
+!distro/fedora.dockerfile
+!distro/ubuntu.dockerfile
+!distro/wsl.conf
+!distro/wsl-distribution.conf
+!distro/wsl-oobe.sh
