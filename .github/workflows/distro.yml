@@ -65,7 +65,7 @@ jobs:
       with:
         prerelease: true
         draft: true
-        generate_release_notes: true
+        generate_release_notes: false
         files: |
           wsl-vpnkit-amd64.wsl
           wsl-vpnkit-amd64.wsl.sha256
