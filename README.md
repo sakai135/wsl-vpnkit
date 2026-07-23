@@ -132,6 +132,7 @@ wsl.exe -d wsl-vpnkit --cd /app DEBUG=1 wsl-vpnkit
 ## Notes
 
 * `wsl-vpnkit` only handles creating a network connection. Proxies and certificates must be configured separately in your distro.
+  * Try [`autoProxy`](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#considerations-when-using-autoproxy-for-httpproxy-mirroring-in-wsl) to have WSL configure the proxy settings.
 * Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
 * Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
 
