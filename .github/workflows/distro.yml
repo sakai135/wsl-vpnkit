@@ -63,9 +63,9 @@ jobs:
     - uses: softprops/action-gh-release@v3
       if: github.ref_type == 'tag'
       with:
+        token: ${{ secrets.GITHUB_TOKEN }}
         prerelease: true
         draft: true
-        generate_release_notes: false
         files: |
           wsl-vpnkit-amd64.wsl
           wsl-vpnkit-amd64.wsl.sha256
