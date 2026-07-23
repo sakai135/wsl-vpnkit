@@ -63,7 +63,7 @@ jobs:
     - uses: softprops/action-gh-release@v3
       if: github.ref_type == 'tag'
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GH_TOKEN }}
         prerelease: true
         draft: true
         files: |
