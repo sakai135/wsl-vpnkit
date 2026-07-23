@@ -103,7 +103,7 @@ Use this command to import the downloaded distro.
 ```pwsh
 # PowerShell
 
-wsl --import wsl-vpnkit --version 2 "$env:USERPROFILE\wsl-vpnkit" wsl-vpnkit.wsl
+wsl --import wsl-vpnkit "$env:USERPROFILE\wsl-vpnkit" wsl-vpnkit.wsl --version 2
 ```
 
 ### Configure VS Code Remote WSL Extension
