@@ -37,7 +37,7 @@ jobs:
         tags: ${{ env.TAG_NAME }}
         build-args: |
           REF=${{ env.RUN_URL }}
-          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
 
     - name: export amd64
       run: |
