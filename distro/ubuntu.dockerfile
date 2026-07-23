@@ -21,7 +21,7 @@ FROM docker.io/library/ubuntu:26.04
 ARG TARGETARCH
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y iproute2 iptables iputils-ping dnsutils wget && \
+    apt-get install -y iproute2 iptables iputils-ping dnsutils wget jq && \
     apt-get clean
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm

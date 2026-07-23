@@ -21,7 +21,7 @@ FROM docker.io/library/alpine:3.24.1
 ARG TARGETARCH
 RUN apk update && \
     apk upgrade && \
-    apk add iproute2 iptables && \
+    apk add iproute2 iptables jq && \
     apk list --installed && \
     rm -rf /var/cache/apk/*
 WORKDIR /app

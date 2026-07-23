@@ -47,7 +47,7 @@ The `wsl-vpnkit` script can be used as a normal script in your existing distro. 
 
 ```sh
 # install dependencies
-sudo apt-get install iproute2 iptables iputils-ping dnsutils wget
+sudo apt-get install iproute2 iptables iputils-ping dnsutils wget jq
 
 # download wsl-vpnkit and unpack
 VERSION=v0.4.x
