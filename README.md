@@ -10,11 +10,11 @@ Before setting up `wsl-vpnkit`, try `ping 1.2.3.4` inside WSL 2. If the pings ar
 
 `wsl-vpnkit` is intended to help when those options do not work.
 
-### Install `wsl-vpnkit` distro
+### Option A: install `wsl-vpnkit` as a distro
 
-Download `wsl-vpnkit.wsl` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and open it to import the distro into WSL 2. 
+Download `wsl-vpnkit.wsl` from the [latest release](https://github.com/sakai135/wsl-vpnkit/releases/latest) and open it to import the distro into WSL 2. This has the advantage of not needing any network connectivity in WSL to start.
 
-Run `wsl-vpnkit`. This starts `wsl-vpnkit` in the foreground.
+Run the following command to start `wsl-vpnkit` in the foreground.
 
 ```sh
 wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
@@ -22,7 +22,7 @@ wsl.exe -d wsl-vpnkit --cd /app wsl-vpnkit
 
 #### Setup systemd
 
-Create the service file and enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
+Create the service file in your normal WSL 2 distro and enable the service. Now `wsl-vpnkit.service` should start with your distro next time.
 
 ```sh
 # copy the service file from wsl-vpnkit to your distro
@@ -41,7 +41,7 @@ To update, unregister the existing `wsl-vpnkit` distro and open the new `wsl-vpn
 wsl.exe --unregister wsl-vpnkit
 ```
 
-### Install as a standalone script
+### Option B: install as a standalone script
 
 The `wsl-vpnkit` script can be used as a normal script in your existing distro. This is an example setup script for Ubuntu.
 
@@ -50,8 +50,7 @@ The `wsl-vpnkit` script can be used as a normal script in your existing distro. 
 sudo apt-get install iproute2 iptables iputils-ping dnsutils wget jq
 
 # download wsl-vpnkit and unpack
-VERSION=v0.4.x
-wget wget https://github.com/sakai135/wsl-vpnkit/releases/download/$VERSION/wsl-vpnkit-amd64.wsl -O wsl-vpnkit.wsl
+wget wget https://github.com/sakai135/wsl-vpnkit/releases/latest/download/wsl-vpnkit-amd64.wsl -O wsl-vpnkit.wsl
 tar --strip-components=1 -xf wsl-vpnkit.wsl app/wsl-vpnkit app/wsl-gvproxy.exe app/wsl-vm app/wsl-vpnkit.service
 rm wsl-vpnkit.wsl
 sudo mv wsl-vpnkit wsl-gvproxy.exe wsl-vm /usr/local/bin/
@@ -67,6 +66,18 @@ systemctl status wsl-vpnkit
 ```
 
 ## Troubleshooting
+
+### Using WSL release prior to 2.4.4
+
+The support for simple importing of `.wsl` distro files were added in WSL release 2.4.4. If you are using an older release of WSL, this command will import the downloaded distro. 
+
+`$env:USERPROFILE\wsl-vpnkit` is the destination folder. `wsl-vpnkit.wsl` should be the path to the downloaded file.
+
+```pwsh
+# PowerShell
+
+wsl --import wsl-vpnkit "$env:USERPROFILE\wsl-vpnkit" wsl-vpnkit.wsl --version 2
+```
 
 ### Error messages from `wsl-vpnkit`
 
@@ -94,16 +105,6 @@ wsl.exe -d wsl-vpnkit --cd /app sed -i -- "s/enabled=false/enabled=true/" /etc/w
 
 # set GVPROXY_PATH when running wsl-vpnkit
 wsl.exe -d wsl-vpnkit --cd /app GVPROXY_PATH=/mnt/c/path/wsl-gvproxy.exe wsl-vpnkit
-```
-
-### Using WSL release prior to 2.4.4
-
-Use this command to import the downloaded distro.
-
-```pwsh
-# PowerShell
-
-wsl --import wsl-vpnkit "$env:USERPROFILE\wsl-vpnkit" wsl-vpnkit.wsl --version 2
 ```
 
 ### Configure VS Code Remote WSL Extension
@@ -138,7 +139,7 @@ wsl.exe -d wsl-vpnkit --cd /app DEBUG=1 wsl-vpnkit
 
 ## Build
 
-The core changes `wsl-vpnkit` made to `gvisor-tap-vsock` were upstreamed back to `gvisor-tap-vsock`. `wsl-vpnkit` is a set of configurations and shell script to execute the binaries from `gvisor-tap-vsock`. 
+The core changes `wsl-vpnkit` made to [`gvisor-tap-vsock`](https://github.com/containers/gvisor-tap-vsock) were upstreamed back to `gvisor-tap-vsock`. `wsl-vpnkit` is a set of configurations and a shell script to execute the binaries from `gvisor-tap-vsock`. 
 
 The Alpine build is used to package everything into one WSL2 distro export. The Fedora and Ubuntu builds are for validating the script in different distros. 
 
