@@ -11,18 +11,18 @@ WORKDIR /app/bin/amd64
 RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvproxy-windows.exe && \
     wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvforwarder && \
     chmod +x ./gvproxy-windows.exe ./gvforwarder
-RUN find . -type f -exec sha256sum {} \;
 WORKDIR /app/bin/arm64
 COPY --from=gvisor-tap-vsock-arm64 /app/bin/gvproxy-windows.exe ./
 COPY --from=gvisor-tap-vsock-arm64 /app/bin/gvforwarder ./
-RUN find . -type f -exec sha256sum {} \;
+WORKDIR /app
+COPY ./distro/checksums ./
+RUN sha256sum -c checksums
 
 FROM docker.io/library/alpine:3.24.1
 ARG TARGETARCH
 RUN apk update && \
     apk upgrade && \
     apk add iproute2 iptables jq && \
-    apk list --installed && \
     rm -rf /var/cache/apk/*
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm

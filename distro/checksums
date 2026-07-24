@@ -1,0 +1,4 @@
+a62731c3e07e6d98b26043d236f4d03c9e2d464d75f1f3ec3670e5b2825eb6a6  ./bin/amd64/gvforwarder
+a3b6915d8a976f5ed2bbba727af52c90c55b9d5e85f680b584c8a1c5d6b546bc  ./bin/amd64/gvproxy-windows.exe
+3decb423b6e28b38a2b2b026e74fd6f58aec03fe6059f426d0c89992d63c66f5  ./bin/arm64/gvforwarder
+a00867aaf0a6694877d3261d0c8e6df5dcfe8eec2fb4b81a084d2bf7a65d7ae8  ./bin/arm64/gvproxy-windows.exe
