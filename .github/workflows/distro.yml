@@ -9,6 +9,16 @@ env:
   RUN_URL: ${{ format('{0}/{1}/actions/runs/{2}/attempts/{3}', github.server_url, github.repository, github.run_id, github.run_attempt) }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    steps:
+    - uses: docker/setup-docker-action@v5
+    - uses: actions/checkout@v7
+    - name: run tests
+      run: ./tests/run.sh
+
   build:
     runs-on: ubuntu-latest
     permissions:

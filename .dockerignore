@@ -1,10 +1,10 @@
-# Ignore everything by default.
 **
 
-# Keep Docker build definitions and copied runtime files.
 !wsl-vpnkit
 !wsl-vpnkit.service
-!distro/wsl.conf
-!distro/wsl-distribution.conf
-!distro/wsl-oobe.sh
-!distro/checksums
+
+!distro/**
+distro/*.dockerfile
+
+!tests/docker/**
+tests/docker/Dockerfile
