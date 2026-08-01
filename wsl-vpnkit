@@ -157,7 +157,7 @@ if [ $? -eq 1 ]; then
 fi
 if [ ! -n "$WSL_INTEROP" ]; then
     echo "WSL interop not available"
-    return 1
+    exit 1
 fi
 $GVPROXY_PATH -help 2>/dev/null
 if [ $? -eq 1 ]; then
