@@ -22,12 +22,12 @@ FROM docker.io/library/ubuntu:26.04
 ARG TARGETARCH
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y iproute2 iptables iputils-ping dnsutils wget jq && \
+    apt-get install -y iproute2 iptables iputils-ping dnsutils wget jq yq && \
     apt-get clean
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvproxy-windows.exe ./wsl-gvproxy.exe
-COPY ./wsl-vpnkit ./wsl-vpnkit.service ./
+COPY ./wsl-vpnkit ./wsl-vpnkit.yaml ./wsl-vpnkit.service ./
 COPY ./distro/wsl.conf ./distro/wsl-distribution.conf ./distro/wsl-oobe.sh /etc/
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0

@@ -22,12 +22,12 @@ FROM docker.io/library/fedora:44
 ARG TARGETARCH
 RUN dnf update -y && \
     dnf upgrade -y && \
-    dnf install -y iproute iptables-legacy iputils bind-utils wget jq && \
+    dnf install -y iproute iptables-legacy iputils bind-utils wget jq yq && \
     dnf clean all
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvproxy-windows.exe ./wsl-gvproxy.exe
-COPY ./wsl-vpnkit ./wsl-vpnkit.service ./
+COPY ./wsl-vpnkit ./wsl-vpnkit.yaml ./wsl-vpnkit.service ./
 COPY ./distro/wsl.conf ./distro/wsl-distribution.conf ./distro/wsl-oobe.sh /etc/
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0

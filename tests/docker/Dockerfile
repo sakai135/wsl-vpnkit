@@ -7,7 +7,7 @@ RUN git clone --depth 1 --branch v0.8.9 https://github.com/containers/gvisor-tap
 FROM docker.io/library/alpine:3.24.1
 RUN apk update && \
     apk upgrade && \
-    apk add iproute2 iptables jq && \
+    apk add iproute2 iptables jq yq && \
     rm -rf /var/cache/apk/*
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/gvforwarder ./wsl-vm

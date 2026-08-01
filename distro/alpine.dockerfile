@@ -22,12 +22,12 @@ FROM docker.io/library/alpine:3.24.1
 ARG TARGETARCH
 RUN apk update && \
     apk upgrade && \
-    apk add iproute2 iptables jq && \
+    apk add iproute2 iptables jq yq && \
     rm -rf /var/cache/apk/*
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvproxy-windows.exe ./wsl-gvproxy.exe
-COPY ./wsl-vpnkit ./wsl-vpnkit.service ./
+COPY ./wsl-vpnkit ./wsl-vpnkit.yaml ./wsl-vpnkit.service ./
 COPY ./distro/wsl.conf ./distro/wsl-distribution.conf ./distro/wsl-oobe.sh /etc/
 ARG REF=https://example.com/
 ARG VERSION=v0.0.0

@@ -7,10 +7,15 @@ VPNKIT_GATEWAY_IP=${VPNKIT_GATEWAY_IP:-192.168.127.1}
 VPNKIT_HOST_IP=${VPNKIT_HOST_IP:-192.168.127.254}
 VPNKIT_LOCAL_IP=${VPNKIT_LOCAL_IP:-192.168.127.2}
 TAP_MAC_ADDR=${TAP_MAC_ADDR:-5a:94:ef:e4:0c:ee}
+VPNKIT_SUBNET_MASK=${VPNKIT_SUBNET_MASK:-24}
 
 # overrideable with env
 VMEXEC_PATH=${VMEXEC_PATH:-$(command -v wsl-vm 2>/dev/null)}
 GVPROXY_PATH=${GVPROXY_PATH:-$(command -v wsl-gvproxy.exe 2>/dev/null)}
+GVPROXY_CONFIG=${GVPROXY_CONFIG:-}
+PREEXISTING=${PREEXISTING:-1}
+DHCP_TIMEOUT=${DHCP_TIMEOUT:-30}
+DHCP_POLL_INTERVAL=${DHCP_POLL_INTERVAL:-1}
 TAP_NAME=${TAP_NAME:-wsltap}
 GVPROXY_SSH_PORT=${GVPROXY_SSH_PORT:--1}
 CHECK_HOST=${CHECK_HOST:-example.com}
@@ -18,6 +23,69 @@ CHECK_DNS=${CHECK_DNS:-1.1.1.1}
 DEBUG=${DEBUG:-0}
 
 set +x
+
+parse_config () {
+    config_enabled=0
+    [ -n "$GVPROXY_CONFIG" ] || return 0
+    [ -f "$GVPROXY_CONFIG" ] || {
+        echo "GVPROXY_CONFIG [$GVPROXY_CONFIG] does not exist"
+        exit 1
+    }
+    [ -r "$GVPROXY_CONFIG" ] || {
+        echo "GVPROXY_CONFIG [$GVPROXY_CONFIG] is not readable"
+        exit 1
+    }
+    awk 'NF { found=1; exit } END { exit found ? 0 : 1 }' "$GVPROXY_CONFIG" ||
+        return 0
+    command -v yq >/dev/null 2>&1 || {
+        echo "yq is required when GVPROXY_CONFIG is enabled"
+        exit 1
+    }
+
+    config_enabled=1
+    config_host_ip=$(yq -r '.stack.gatewayVirtualIPs[0] // ""' "$GVPROXY_CONFIG")
+    [ -n "$config_host_ip" ] || {
+        echo "GVPROXY_CONFIG is missing stack.gatewayVirtualIPs[0]"
+        exit 1
+    }
+    VPNKIT_HOST_IP=$config_host_ip
+    VPNKIT_GATEWAY_IP=$(yq -r '.stack.gatewayIP // ""' "$GVPROXY_CONFIG")
+    [ -n "$VPNKIT_GATEWAY_IP" ] || {
+        echo "GVPROXY_CONFIG is missing stack.gatewayIP"
+        exit 1
+    }
+    config_subnet=$(yq -r '.stack.subnet // ""' "$GVPROXY_CONFIG")
+    case "$config_subnet" in
+        */[0-9]|*/[1-2][0-9]|*/3[0-2])
+            VPNKIT_SUBNET_MASK=${config_subnet##*/}
+            ;;
+        *)
+            echo "GVPROXY_CONFIG has an invalid stack.subnet [$config_subnet]"
+            exit 1
+            ;;
+    esac
+    VPNKIT_LOCAL_IP=$(yq -r \
+        '(.stack.dhcpStaticLeases // {}) | to_entries[0].key // ""' \
+        "$GVPROXY_CONFIG")
+    TAP_MAC_ADDR=$(yq -r \
+        '(.stack.dhcpStaticLeases // {}) | to_entries[0].value // ""' \
+        "$GVPROXY_CONFIG")
+    [ -n "$VPNKIT_LOCAL_IP" ] || {
+        echo "GVPROXY_CONFIG is missing the DHCP static lease address"
+        exit 1
+    }
+    [ -n "$TAP_MAC_ADDR" ] || {
+        echo "GVPROXY_CONFIG is missing stack.dhcpStaticLeases"
+        exit 1
+    }
+}
+
+case "$PREEXISTING" in
+    0|1) ;;
+    *) echo "PREEXISTING must be 0 or 1"; exit 1 ;;
+esac
+
+parse_config
 
 # WSL2 default values
 WSL2_DEFAULT_ROUTE_JSON="$(ip -j route show default 2>/dev/null)"
@@ -50,25 +118,59 @@ command -v iptables-legacy >/dev/null && alias iptables=iptables-legacy
 
 run () {
     echo "starting vm and gvproxy..."
+    if [ "$PREEXISTING" -eq 0 ]; then
+        VM_IFACE_OPTION="-mac=$TAP_MAC_ADDR"
+    else
+        VM_IFACE_OPTION="-preexisting=1"
+    fi
+    if [ "$config_enabled" -eq 1 ]; then
+        GVPROXY_SSH_PORT="-1&config=$GVPROXY_CONFIG"
+    fi
     $VMEXEC_PATH \
         -url="stdio:$GVPROXY_PATH?listen-stdio=accept&ssh-port=$GVPROXY_SSH_PORT&debug=$DEBUG" \
         -iface="$TAP_NAME" \
         -stop-if-exist="" \
-        -preexisting=1 \
+        "$VM_IFACE_OPTION" \
         -debug=$DEBUG &
+    VM_PID=$!
     sleep 1 # wait to establish connection
     echo "started vm and gvproxy"
 }
 
+wait_for_dhcp () {
+    elapsed=0
+    while [ "$elapsed" -lt "$DHCP_TIMEOUT" ]; do
+        kill -0 "$VM_PID" 2>/dev/null ||
+            { echo "wsl-vm exited while waiting for DHCP on $TAP_NAME"; exit 1; }
+        if ip -j -4 addr show dev "$TAP_NAME" |
+            jq -e --arg ip "$VPNKIT_LOCAL_IP" \
+            '[.[0].addr_info[]? | select(.family == "inet")] |
+            length == 1 and .[0].local == $ip' >/dev/null &&
+            ip -j route show default dev "$TAP_NAME" |
+            jq -e --arg gateway "$VPNKIT_GATEWAY_IP" \
+            '[.[] | select(.gateway == $gateway)] | length == 1' >/dev/null; then
+            return 0
+        fi
+        sleep "$DHCP_POLL_INTERVAL"
+        elapsed=$((elapsed + DHCP_POLL_INTERVAL))
+    done
+    echo "DHCP did not assign $VPNKIT_LOCAL_IP with gateway $VPNKIT_GATEWAY_IP within ${DHCP_TIMEOUT}s"
+    exit 1
+}
+
+wsl2route_down () {
+    ip route del default
+}
+
 wsl2tap_down () {
     # remove WSL2 default route
-    ip route del default
+    wsl2route_down
 
     # setup wsl-vpnkit tap
     ip tuntap add $TAP_NAME mode tap
     ip link set dev $TAP_NAME address $TAP_MAC_ADDR
     ip link set dev $TAP_NAME up
-    ip addr add $VPNKIT_LOCAL_IP/255.255.255.0 dev $TAP_NAME
+    ip addr add $VPNKIT_LOCAL_IP/$VPNKIT_SUBNET_MASK dev $TAP_NAME
     ip route add default via $VPNKIT_GATEWAY_IP dev $TAP_NAME
 }
 
@@ -91,40 +193,77 @@ iptables_set () {
     iptables -t nat -$1 POSTROUTING -o $TAP_NAME -j MASQUERADE
 }
 
-check_ping () {
-    ping -$1 -c 1 $3 >/dev/null && \
-        echo "check: ✔️ ping success to IPv$1 $2 ($3)" || \
-        echo "check: $([ $1 = '6' ] && echo '➖' || echo '❌') ping fail to IPv$1 $2 ($3)"
+check_interface () {
+    if ip link show dev "$TAP_NAME" 2>/dev/null |
+        grep -q 'state UP'; then
+        echo "check: ✔️ interface up for $TAP_NAME"
+        return 0
+    fi
+    echo "check: ❌ interface not up for $TAP_NAME"
+    return 1
+}
+
+check_route_entry () {
+    route=$(ip route get "$2" 2>/dev/null) || {
+        echo "check: ❌ route lookup failed for $1 ($2)"
+        return 1
+    }
+    case " $route " in
+        *" dev $TAP_NAME "*) ;;
+        *)
+            echo "check: ❌ route lookup for $1 ($2) does not use $TAP_NAME"
+            return 1
+            ;;
+    esac
+    echo "check: ✔️ route lookup success for $1 ($2) via $TAP_NAME"
+    return 0
 }
 
 check_dns () {
-    TYPE=$([ "$1" = "4" ] && echo 'A' || echo 'AAAA')
-    nslookup -type=$TYPE $2 $3 >/dev/null && \
-        echo "check: ✔️ nslookup success for $2 $TYPE using $3" || \
-        echo "check: ❌ nslookup fail for $2 $TYPE using $3"
+    dns_type=$([ "$1" = "4" ] && echo 'A' || echo 'AAAA')
+    if nslookup -timeout=5 -retry=1 -type="$dns_type" "$2" "$3" >/dev/null 2>&1; then
+        echo "check: ✔️ nslookup success for $2 $dns_type using $3"
+        return 0
+    fi
+    echo "check: ❌ nslookup fail for $2 $dns_type using $3"
+    return 1
 }
 
 check_https () {
-    wget --spider -q $1 && \
-        echo "check: ✔️ wget success for $1" || \
-        echo "check: ❌ wget fail for $1"
+    if wget --spider -q --timeout=5 --tries=1 "$1"; then
+        echo "check: ✔️ wget success for $1"
+        return 0
+    fi
+    echo "check: ❌ wget fail for $1"
+    return 1
 }
 
 check () {
-    check_ping 4 'WSL 2 gateway / Windows host' $WSL2_GATEWAY_IP
-    check_ping 4 'Windows host' $VPNKIT_HOST_IP
-    check_ping 4 'gateway' $VPNKIT_GATEWAY_IP
-    check_dns 4 $CHECK_HOST $VPNKIT_GATEWAY_IP
-    check_dns 4 $CHECK_HOST $WSL2_GATEWAY_IP
-    check_dns 4 $CHECK_HOST $CHECK_DNS
-    check_ping 4 'external host domain' $CHECK_HOST
-    check_ping 4 'external host IP' $CHECK_DNS
-    check_dns 6 $CHECK_HOST $VPNKIT_GATEWAY_IP
-    check_dns 6 $CHECK_HOST $WSL2_GATEWAY_IP
-    check_dns 6 $CHECK_HOST $CHECK_DNS
-    check_ping 6 'external host' $CHECK_HOST
-    check_https "http://$CHECK_HOST"
-    check_https "https://$CHECK_HOST"
+    failures=0
+
+    # ICMP is not a reliable connectivity test for gvisor-tap-vsock.
+    check_interface || failures=$((failures + 1))
+    check_route_entry 'WSL 2 gateway / Windows host' "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
+    check_route_entry 'Windows host' "$VPNKIT_HOST_IP" || failures=$((failures + 1))
+    check_route_entry 'gateway' "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
+    check_route_entry 'external host / DNS server' "$CHECK_DNS" || failures=$((failures + 1))
+
+    check_dns 4 "$CHECK_HOST" "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
+    check_dns 4 "$CHECK_HOST" "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
+    check_dns 4 "$CHECK_HOST" "$CHECK_DNS" || failures=$((failures + 1))
+    check_dns 6 "$CHECK_HOST" "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
+    check_dns 6 "$CHECK_HOST" "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
+    check_dns 6 "$CHECK_HOST" "$CHECK_DNS" || failures=$((failures + 1))
+
+    check_https "http://$CHECK_HOST" || failures=$((failures + 1))
+    check_https "https://$CHECK_HOST" || failures=$((failures + 1))
+
+    if [ "$failures" -eq 0 ]; then
+        echo "check: all diagnostic checks passed"
+        return 0
+    fi
+    echo "check: $failures diagnostic check(s) failed"
+    return 1
 }
 
 cleanup () {
@@ -172,8 +311,18 @@ trap exit int term
 # run cleanup to restore any leftover configuration changes
 cleanup
 
-wsl2tap_down
+if [ "$PREEXISTING" -eq 1 ]; then
+    wsl2tap_down
+else
+    wsl2route_down
+fi
 run
+if [ "$PREEXISTING" -eq 0 ]; then
+    wait_for_dhcp
+fi
 iptables_set A
-check
+check || echo "check: completed with failures, continue"
+wait "$VM_PID"
+status=$?
 wait
+exit "$status"
