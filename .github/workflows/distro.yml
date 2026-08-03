@@ -12,7 +12,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     permissions:
-      checks: write
+      contents: read
     steps:
     - uses: docker/setup-docker-action@v5
     - uses: actions/checkout@v7
@@ -22,7 +22,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      checks: write
+      contents: read
+      id-token: write
+      attestations: write
     steps:
     - uses: docker/setup-docker-action@v5
       with:
@@ -44,6 +46,8 @@ jobs:
         platforms: linux/arm64,linux/amd64
         push: false
         load: true
+        provenance: mode=max
+        sbom: true
         tags: ${{ env.TAG_NAME }}
         build-args: |
           REF=${{ env.RUN_URL }}
@@ -61,6 +65,12 @@ jobs:
         docker export $CONTAINER_ID | gzip > wsl-vpnkit-arm64.wsl
         sha256sum wsl-vpnkit-arm64.wsl | tee wsl-vpnkit-arm64.wsl.sha256
         ls -la wsl-vpnkit-arm64.wsl
+
+    - uses: actions/attest-build-provenance@v4
+      with:
+        subject-path: |
+          wsl-vpnkit-amd64.wsl
+          wsl-vpnkit-arm64.wsl
 
     - uses: actions/upload-artifact@v7
       with:
