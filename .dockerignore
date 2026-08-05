@@ -1,6 +1,7 @@
 **
 
 !wsl-vpnkit
+!wsl-vpnkit.yaml
 !wsl-vpnkit.service
 
 !distro/**

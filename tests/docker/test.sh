@@ -111,6 +111,57 @@ stop_background "$log_dir/network.log"
 [ "$(ip -4 route show default)" = "$original_route" ] || fail "network route was not restored"
 assert_clean networktap
 
+echo "case: config static DHCP lease configures the preexisting tap"
+config_file="$log_dir/wsl-vpnkit.yaml"
+cat >"$config_file" <<'EOF'
+stack:
+  subnet: 192.168.127.0/24
+  gatewayIP: 192.168.127.1
+  gatewayVirtualIPs:
+  - 192.168.127.254
+  dhcpStaticLeases:
+    192.168.127.2: 5a:94:ef:e4:0c:ef
+EOF
+# shellcheck disable=SC2086
+start_background "$log_dir/config.log" env $common_env \
+    GVPROXY_CONFIG="$config_file" CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 \
+    MOCK_VM_MODE=run "$script"
+sleep 2
+ip -4 addr show dev wsltap | grep -q -- "192.168.127.2/24" ||
+    fail "config static lease address was not applied"
+ip link show dev wsltap | grep -q -- "5a:94:ef:e4:0c:ef" ||
+    fail "config static lease MAC was not applied"
+grep -q -- "config=$config_file" "$log_dir/vm.log" ||
+    fail "config file was not passed to wsl-vm"
+stop_background "$log_dir/config.log"
+[ "$(ip -4 route show default)" = "$original_route" ] || fail "config route was not restored"
+assert_clean
+
+echo "case: wsl-vm-owned DHCP lease"
+# shellcheck disable=SC2086
+start_background "$log_dir/dhcp.log" env $common_env PREEXISTING=0 \
+    DHCP_TIMEOUT=5 CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 \
+    MOCK_DHCP_MODE=success MOCK_VM_MODE=run "$script"
+sleep 2
+ip -4 addr show dev wsltap | grep -q -- "192.168.127.2/24" ||
+    fail "DHCP lease was not applied"
+ip -4 route show default | grep -q -- "default via 192.168.127.1 dev wsltap" ||
+    fail "DHCP TAP route was not made the default route"
+stop_background "$log_dir/dhcp.log"
+[ "$(ip -4 route show default)" = "$original_route" ] || fail "DHCP route was not restored"
+assert_clean
+
+echo "case: DHCP timeout cleans up"
+if env $common_env PREEXISTING=0 DHCP_TIMEOUT=2 DHCP_POLL_INTERVAL=1 \
+    MOCK_DHCP_MODE=timeout MOCK_VM_MODE=run "$script" \
+    >"$log_dir/dhcp-timeout.log" 2>&1; then
+    fail "DHCP timeout was reported as success"
+fi
+grep -q -- "DHCP did not assign" "$log_dir/dhcp-timeout.log" ||
+    fail "DHCP timeout error was not shown"
+[ "$(ip -4 route show default)" = "$original_route" ] || fail "DHCP timeout route was not restored"
+assert_clean
+
 echo "case: modified resolv.conf warning"
 modified_resolvconf="$log_dir/modified-resolv.conf"
 printf 'nameserver %s\n' "$original_gateway" >"$modified_resolvconf"
@@ -128,8 +179,10 @@ rm -f "$modified_resolvconf"
 
 echo "case: VM exit cleans up"
 # shellcheck disable=SC2086
-env $common_env CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 MOCK_VM_MODE=exit \
-    "$script" >"$log_dir/failure.log" 2>&1
+if env $common_env CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 MOCK_VM_MODE=exit \
+    "$script" >"$log_dir/failure.log" 2>&1; then
+    fail "VM exit was reported as success"
+fi
 print_log "$log_dir/failure.log"
 [ "$(ip -4 route show default)" = "$original_route" ] || fail "failure route was not restored"
 assert_clean
