@@ -124,7 +124,8 @@ run () {
         VM_IFACE_OPTION="-preexisting=1"
     fi
     if [ "$config_enabled" -eq 1 ]; then
-        GVPROXY_SSH_PORT="-1&config=$GVPROXY_CONFIG"
+        GVPROXY_CONFIG_URL=$(jq -nr --arg value "$GVPROXY_CONFIG" '$value | @uri')
+        GVPROXY_SSH_PORT="-1&config=$GVPROXY_CONFIG_URL"
     fi
     $VMEXEC_PATH \
         -url="stdio:$GVPROXY_PATH?listen-stdio=accept&ssh-port=$GVPROXY_SSH_PORT&debug=$DEBUG" \

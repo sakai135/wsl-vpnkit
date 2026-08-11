@@ -112,7 +112,7 @@ stop_background "$log_dir/network.log"
 assert_clean networktap
 
 echo "case: config static DHCP lease configures the preexisting tap"
-config_file="$log_dir/wsl-vpnkit.yaml"
+config_file="$log_dir/wsl-vpnkit config & ? test.yaml"
 cat >"$config_file" <<'EOF'
 stack:
   subnet: 192.168.127.0/24
@@ -122,6 +122,7 @@ stack:
   dhcpStaticLeases:
     192.168.127.2: 5a:94:ef:e4:0c:ef
 EOF
+config_query=$(printf '%s' "$config_file" | jq -sRr @uri)
 # shellcheck disable=SC2086
 start_background "$log_dir/config.log" env $common_env \
     GVPROXY_CONFIG="$config_file" CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 \
@@ -131,8 +132,8 @@ ip -4 addr show dev wsltap | grep -q -- "192.168.127.2/24" ||
     fail "config static lease address was not applied"
 ip link show dev wsltap | grep -q -- "5a:94:ef:e4:0c:ef" ||
     fail "config static lease MAC was not applied"
-grep -q -- "config=$config_file" "$log_dir/vm.log" ||
-    fail "config file was not passed to wsl-vm"
+grep -q -- "config=$config_query" "$log_dir/vm.log" ||
+    fail "config file was not passed to wsl-vm with URL-safe escaping"
 stop_background "$log_dir/config.log"
 [ "$(ip -4 route show default)" = "$original_route" ] || fail "config route was not restored"
 assert_clean
