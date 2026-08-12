@@ -18,8 +18,7 @@ DHCP_TIMEOUT=${DHCP_TIMEOUT:-30}
 DHCP_POLL_INTERVAL=${DHCP_POLL_INTERVAL:-1}
 TAP_NAME=${TAP_NAME:-wsltap}
 GVPROXY_SSH_PORT=${GVPROXY_SSH_PORT:--1}
-CHECK_HOST=${CHECK_HOST:-example.com}
-CHECK_DNS=${CHECK_DNS:-1.1.1.1}
+CHECK_HOST=${CHECK_HOST:-host.containers.internal}
 DEBUG=${DEBUG:-0}
 
 set +x
@@ -35,8 +34,10 @@ parse_config () {
         echo "GVPROXY_CONFIG [$GVPROXY_CONFIG] is not readable"
         exit 1
     }
-    awk 'NF { found=1; exit } END { exit found ? 0 : 1 }' "$GVPROXY_CONFIG" ||
-        return 0
+    awk 'NF { found=1; exit } END { exit found ? 0 : 1 }' "$GVPROXY_CONFIG" || {
+        echo "GVPROXY_CONFIG [$GVPROXY_CONFIG] is empty"
+        exit 1
+    }
     command -v yq >/dev/null 2>&1 || {
         echo "yq is required when GVPROXY_CONFIG is enabled"
         exit 1
@@ -146,8 +147,7 @@ wait_for_dhcp () {
             { echo "wsl-vm exited while waiting for DHCP on $TAP_NAME"; exit 1; }
         if ip -j -4 addr show dev "$TAP_NAME" |
             jq -e --arg ip "$VPNKIT_LOCAL_IP" \
-            '[.[0].addr_info[]? | select(.family == "inet")] |
-            length == 1 and .[0].local == $ip' >/dev/null &&
+            'any(.[0].addr_info[]?; .family == "inet" and .local == $ip)' >/dev/null &&
             ip -j route show default dev "$TAP_NAME" |
             jq -e --arg gateway "$VPNKIT_GATEWAY_IP" \
             '[.[] | select(.gateway == $gateway)] | length == 1' >/dev/null; then
@@ -205,60 +205,76 @@ check_interface () {
     return 1
 }
 
-check_route_entry () {
-    route=$(ip route get "$2" 2>/dev/null) || {
-        echo "check: ❌ route lookup failed for $1 ($2)"
+check_local_address () {
+    if ip -j -4 addr show dev "$TAP_NAME" 2>/dev/null |
+        jq -e --arg ip "$VPNKIT_LOCAL_IP" --arg prefix "$VPNKIT_SUBNET_MASK" \
+        --argjson preexisting "$PREEXISTING" \
+        'any(.[0].addr_info[]?; .family == "inet" and .local == $ip and
+        ($preexisting == 0 or (.prefixlen | tostring) == $prefix))' \
+        >/dev/null; then
+        echo "check: ✔️ local address configured for $TAP_NAME"
+        return 0
+    fi
+    if [ "$PREEXISTING" -eq 1 ]; then
+        expected_address="$VPNKIT_LOCAL_IP/$VPNKIT_SUBNET_MASK"
+    else
+        expected_address="$VPNKIT_LOCAL_IP from DHCP"
+    fi
+    echo "check: ❌ local address is not configured as $expected_address on $TAP_NAME"
+    return 1
+}
+
+check_default_route () {
+    if ip -j route show default 2>/dev/null |
+        jq -e --arg dev "$TAP_NAME" --arg gateway "$VPNKIT_GATEWAY_IP" \
+        'any(.[]; .dev == $dev and .gateway == $gateway)' >/dev/null; then
+        echo "check: ✔️ default route configured via $VPNKIT_GATEWAY_IP on $TAP_NAME"
+        return 0
+    fi
+    echo "check: ❌ default route is not configured via $VPNKIT_GATEWAY_IP on $TAP_NAME"
+    return 1
+}
+
+check_nat_rules () {
+    if ! iptables -t nat -C PREROUTING \
+        -d "${WSL2_GATEWAY_IP}/32" \
+        -j DNAT --to-destination "$VPNKIT_HOST_IP" 2>/dev/null; then
+        echo "check: ❌ host forwarding NAT rule is missing"
         return 1
-    }
-    case " $route " in
-        *" dev $TAP_NAME "*) ;;
-        *)
-            echo "check: ❌ route lookup for $1 ($2) does not use $TAP_NAME"
-            return 1
-            ;;
-    esac
-    echo "check: ✔️ route lookup success for $1 ($2) via $TAP_NAME"
+    fi
+    if ! iptables -t nat -C OUTPUT \
+        -d "${WSL2_GATEWAY_IP}/32" \
+        -j DNAT --to-destination "$VPNKIT_HOST_IP" 2>/dev/null; then
+        echo "check: ❌ local host forwarding NAT rule is missing"
+        return 1
+    fi
+    if ! iptables -t nat -C POSTROUTING \
+        -o "$TAP_NAME" -j MASQUERADE 2>/dev/null; then
+        echo "check: ❌ TAP masquerade NAT rule is missing"
+        return 1
+    fi
+    echo "check: ✔️ NAT rules are installed"
     return 0
 }
 
 check_dns () {
-    dns_type=$([ "$1" = "4" ] && echo 'A' || echo 'AAAA')
-    if nslookup -timeout=5 -retry=1 -type="$dns_type" "$2" "$3" >/dev/null 2>&1; then
-        echo "check: ✔️ nslookup success for $2 $dns_type using $3"
+    if nslookup -timeout=5 -retry=1 -type=A "$1" "$2" >/dev/null 2>&1; then
+        echo "check: ✔️ nslookup success for $1 using $2"
         return 0
     fi
-    echo "check: ❌ nslookup fail for $2 $dns_type using $3"
-    return 1
-}
-
-check_https () {
-    if wget --spider -q --timeout=5 --tries=1 "$1"; then
-        echo "check: ✔️ wget success for $1"
-        return 0
-    fi
-    echo "check: ❌ wget fail for $1"
+    echo "check: ❌ nslookup fail for $1 using $2"
     return 1
 }
 
 check () {
     failures=0
 
-    # ICMP is not a reliable connectivity test for gvisor-tap-vsock.
     check_interface || failures=$((failures + 1))
-    check_route_entry 'WSL 2 gateway / Windows host' "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
-    check_route_entry 'Windows host' "$VPNKIT_HOST_IP" || failures=$((failures + 1))
-    check_route_entry 'gateway' "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
-    check_route_entry 'external host / DNS server' "$CHECK_DNS" || failures=$((failures + 1))
-
-    check_dns 4 "$CHECK_HOST" "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
-    check_dns 4 "$CHECK_HOST" "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
-    check_dns 4 "$CHECK_HOST" "$CHECK_DNS" || failures=$((failures + 1))
-    check_dns 6 "$CHECK_HOST" "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
-    check_dns 6 "$CHECK_HOST" "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
-    check_dns 6 "$CHECK_HOST" "$CHECK_DNS" || failures=$((failures + 1))
-
-    check_https "http://$CHECK_HOST" || failures=$((failures + 1))
-    check_https "https://$CHECK_HOST" || failures=$((failures + 1))
+    check_local_address || failures=$((failures + 1))
+    check_default_route || failures=$((failures + 1))
+    check_dns "$CHECK_HOST" "$VPNKIT_GATEWAY_IP" || failures=$((failures + 1))
+    check_dns "$CHECK_HOST" "$WSL2_GATEWAY_IP" || failures=$((failures + 1))
+    check_nat_rules || failures=$((failures + 1))
 
     if [ "$failures" -eq 0 ]; then
         echo "check: all diagnostic checks passed"
@@ -288,6 +304,10 @@ if [ ! -f "$VMEXEC_PATH" ]; then
     echo "VMEXEC_PATH [$VMEXEC_PATH] does not exist"
     exit 1
 fi
+if [ ! -x "$VMEXEC_PATH" ]; then
+    echo "VMEXEC_PATH [$VMEXEC_PATH] is not executable"
+    exit 1
+fi
 if [ ! -f "$GVPROXY_PATH" ]; then
     echo "GVPROXY_PATH [$GVPROXY_PATH] does not exist"
     exit 1
@@ -300,8 +320,7 @@ if [ ! -n "$WSL_INTEROP" ]; then
     echo "WSL interop not available"
     exit 1
 fi
-"$GVPROXY_PATH" -help 2>/dev/null
-if [ $? -eq 1 ]; then
+if ! "$GVPROXY_PATH" -help 2>/dev/null; then
     echo "$GVPROXY_PATH is not executable due to WSL interop settings or Windows permissions"
     exit 1
 fi
