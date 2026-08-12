@@ -127,7 +127,7 @@ run () {
         GVPROXY_CONFIG_URL=$(jq -nr --arg value "$GVPROXY_CONFIG" '$value | @uri')
         GVPROXY_SSH_PORT="-1&config=$GVPROXY_CONFIG_URL"
     fi
-    GVPROXY_PATH_URL=$(jq -nr --arg value "$GVPROXY_PATH" '$value | @uri')
+    GVPROXY_PATH_URL=$(jq -nr --arg value "$GVPROXY_PATH" '$value | @uri' | sed 's#%2F#/#g')
     "$VMEXEC_PATH" \
         -url="stdio:$GVPROXY_PATH_URL?listen-stdio=accept&ssh-port=$GVPROXY_SSH_PORT&debug=$DEBUG" \
         -iface="$TAP_NAME" \
