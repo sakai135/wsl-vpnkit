@@ -202,4 +202,25 @@ fi
 grep -q -- "GVPROXY_PATH \[/does-not-exist\] does not exist" \
     "$log_dir/missing-gvproxy.log" || fail "missing gvproxy executable error was not shown"
 
+echo "case: executable paths with spaces are accepted"
+space_dir="$log_dir/space dir"
+mkdir -p "$space_dir"
+cp /tests/mock-vm "$space_dir/mock vm"
+cp /usr/local/bin/wsl-gvproxy.exe "$space_dir/gvproxy exe"
+# shellcheck disable=SC2086
+start_background "$log_dir/space-paths.log" env \
+    WSL_INTEROP=1 WSL2_GATEWAY_IP=$original_gateway WSL2_TAP_NAME=eth0 \
+    WSL2_RESOLVCONF=/etc/resolv.conf \
+    VMEXEC_PATH="$space_dir/mock vm" \
+    GVPROXY_PATH="$space_dir/gvproxy exe" \
+    MOCK_LOG_DIR=$log_dir \
+    CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 MOCK_VM_MODE=run \
+    "$script"
+sleep 2
+ip link show dev wsltap >/dev/null 2>&1 || fail "startup with executable paths containing spaces did not create tap"
+grep -q -- "%20" "$log_dir/vm.log" || fail "gvproxy path with spaces was not URL-encoded"
+stop_background "$log_dir/space-paths.log"
+[ "$(ip -4 route show default)" = "$original_route" ] || fail "route was not restored after path-with-spaces startup"
+assert_clean
+
 echo "PASS: wsl-vpnkit Docker harness"
