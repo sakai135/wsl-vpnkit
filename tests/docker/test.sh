@@ -112,7 +112,7 @@ stop_background "$log_dir/network.log"
 assert_clean networktap
 
 echo "case: config static DHCP lease configures the preexisting tap"
-config_file="$log_dir/wsl-vpnkit.yaml"
+config_file="$log_dir/wsl-vpnkit config & ? test.yaml"
 cat >"$config_file" <<'EOF'
 stack:
   subnet: 192.168.127.0/24
@@ -122,6 +122,7 @@ stack:
   dhcpStaticLeases:
     192.168.127.2: 5a:94:ef:e4:0c:ef
 EOF
+config_query=$(printf '%s' "$config_file" | jq -sRr @uri)
 # shellcheck disable=SC2086
 start_background "$log_dir/config.log" env $common_env \
     GVPROXY_CONFIG="$config_file" CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 \
@@ -131,8 +132,8 @@ ip -4 addr show dev wsltap | grep -q -- "192.168.127.2/24" ||
     fail "config static lease address was not applied"
 ip link show dev wsltap | grep -q -- "5a:94:ef:e4:0c:ef" ||
     fail "config static lease MAC was not applied"
-grep -q -- "config=$config_file" "$log_dir/vm.log" ||
-    fail "config file was not passed to wsl-vm"
+grep -q -- "config=$config_query" "$log_dir/vm.log" ||
+    fail "config file was not passed to wsl-vm with URL-safe escaping"
 stop_background "$log_dir/config.log"
 [ "$(ip -4 route show default)" = "$original_route" ] || fail "config route was not restored"
 assert_clean
@@ -200,5 +201,26 @@ if env $common_env GVPROXY_PATH=/does-not-exist "$script" >"$log_dir/missing-gvp
 fi
 grep -q -- "GVPROXY_PATH \[/does-not-exist\] does not exist" \
     "$log_dir/missing-gvproxy.log" || fail "missing gvproxy executable error was not shown"
+
+echo "case: executable paths with spaces are accepted"
+space_dir="$log_dir/space dir"
+mkdir -p "$space_dir"
+cp /tests/mock-vm "$space_dir/mock vm"
+cp /usr/local/bin/wsl-gvproxy.exe "$space_dir/gvproxy exe"
+# shellcheck disable=SC2086
+start_background "$log_dir/space-paths.log" env \
+    WSL_INTEROP=1 WSL2_GATEWAY_IP=$original_gateway WSL2_TAP_NAME=eth0 \
+    WSL2_RESOLVCONF=/etc/resolv.conf \
+    VMEXEC_PATH="$space_dir/mock vm" \
+    GVPROXY_PATH="$space_dir/gvproxy exe" \
+    MOCK_LOG_DIR=$log_dir \
+    CHECK_HOST=127.0.0.1 CHECK_DNS=127.0.0.1 MOCK_VM_MODE=run \
+    "$script"
+sleep 2
+ip link show dev wsltap >/dev/null 2>&1 || fail "startup with executable paths containing spaces did not create tap"
+grep -q -- "%20" "$log_dir/vm.log" || fail "gvproxy path with spaces was not URL-encoded"
+stop_background "$log_dir/space-paths.log"
+[ "$(ip -4 route show default)" = "$original_route" ] || fail "route was not restored after path-with-spaces startup"
+assert_clean
 
 echo "PASS: wsl-vpnkit Docker harness"
