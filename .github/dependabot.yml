@@ -4,6 +4,9 @@ updates:
     directory: "/distro"
     schedule:
       interval: "daily"
+    ignore:
+      - dependency-name: "library/golang"
+        versions: ["*rc*"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
