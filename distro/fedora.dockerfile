@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.26.5 AS gvisor-tap-vsock-arm64
+FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.26.6 AS gvisor-tap-vsock-arm64
 WORKDIR /app
 RUN git clone --depth 1 --branch v0.8.9 https://github.com/containers/gvisor-tap-vsock.git . && \
     GOARCH=arm64 make vm && \
