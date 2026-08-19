@@ -21,7 +21,7 @@ docker run --rm \
     --device=/dev/net/tun:/dev/net/tun \
     --security-opt=no-new-privileges:true \
     --read-only \
-    --tmpfs=/run:rw,nosuid,nodev \
+    --tmpfs=/run:rw,nosuid,nodev,exec \
     --tmpfs=/tmp:rw,nosuid,nodev \
     --network "$network" \
     --env DEBUG="${DEBUG:-}" \

@@ -4,28 +4,29 @@ log_dir=${MOCK_LOG_DIR:-/run/wsl-vpnkit-test}
 printf '%s\n' "$*" >> "$log_dir/vm.log"
 
 preexisting=0
-dhcp=0
+tap_name=wsltap
+tap_mac=
 for arg do
     [ "$arg" = "-preexisting=1" ] && preexisting=1
-    case "$arg" in -mac=*) dhcp=1 ;; esac
+    case "$arg" in
+        -iface=*) tap_name=${arg#-iface=} ;;
+        -mac=*) tap_mac=${arg#-mac=} ;;
+    esac
 done
 if [ "$preexisting" -eq 0 ]; then
-    ip tuntap add wsltap mode tap
-    ip link set dev wsltap up
-    if [ "$dhcp" -eq 0 ] || [ "${MOCK_DHCP_MODE:-success}" = success ]; then
-        ip addr add 192.168.127.2/24 dev wsltap
-        ip route add default via 192.168.127.1 dev wsltap
-    elif [ "${MOCK_DHCP_MODE:-}" = wrong ]; then
-        ip addr add 192.168.127.99/24 dev wsltap
-        ip route add default via 192.168.127.1 dev wsltap
+    ip tuntap add "$tap_name" mode tap
+    [ -n "$tap_mac" ] && ip link set dev "$tap_name" address "$tap_mac"
+    ip link set dev "$tap_name" up
+    if [ -n "${MOCK_DHCP_IP:-}" ]; then
+        ip addr add "${MOCK_DHCP_IP}/${MOCK_DHCP_MASK:-24}" dev "$tap_name"
+        ip route add default via "$MOCK_DHCP_GATEWAY" dev "$tap_name"
     fi
-    trap 'ip route del default via 192.168.127.1 dev wsltap 2>/dev/null || :; ip tuntap del wsltap mode tap 2>/dev/null || :; exit 0' INT TERM
+    trap 'ip tuntap del "$tap_name" mode tap 2>/dev/null || :; exit 0' INT TERM
 fi
 
 if [ "${MOCK_VM_MODE:-run}" = "exit" ]; then
     [ "$preexisting" -eq 0 ] && {
-        ip route del default via 192.168.127.1 dev wsltap 2>/dev/null || :
-        ip tuntap del wsltap mode tap 2>/dev/null || :
+        ip tuntap del "$tap_name" mode tap 2>/dev/null || :
     }
     exit 1
 fi

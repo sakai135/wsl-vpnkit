@@ -22,7 +22,7 @@ FROM docker.io/library/fedora:44
 ARG TARGETARCH
 RUN dnf update -y && \
     dnf upgrade -y && \
-    dnf install -y iproute iptables-legacy iputils bind-utils wget jq yq && \
+    dnf install -y iproute iptables-legacy iputils bind-utils jq yq && \
     dnf clean all
 WORKDIR /app
 COPY --from=gvisor-tap-vsock /app/bin/${TARGETARCH}/gvforwarder ./wsl-vm

@@ -47,10 +47,10 @@ The `wsl-vpnkit` script can be installed and run in your existing distro. The fo
 
 ```sh
 # install dependencies
-sudo apt-get install iproute2 iptables iputils-ping dnsutils wget jq yq
+sudo apt-get install iproute2 iptables iputils-ping dnsutils curl jq yq
 
 # download wsl-vpnkit and unpack
-wget https://github.com/sakai135/wsl-vpnkit/releases/latest/download/wsl-vpnkit-amd64.wsl -O wsl-vpnkit.wsl
+curl -fL https://github.com/sakai135/wsl-vpnkit/releases/latest/download/wsl-vpnkit-amd64.wsl -o wsl-vpnkit.wsl
 tar --strip-components=1 -xf wsl-vpnkit.wsl app/wsl-vpnkit app/wsl-vpnkit.yaml app/wsl-gvproxy.exe app/wsl-vm app/wsl-vpnkit.service
 rm wsl-vpnkit.wsl
 sudo mv wsl-vpnkit wsl-gvproxy.exe wsl-vm /usr/local/bin/
@@ -74,8 +74,7 @@ The `wsl-vpnkit` script supports the following environment variables. For the fu
 | Variable (default value) | Description |
 | --- | --- |
 | `DEBUG` (`0`) | Enables debug output when set to `1`. |
-| `CHECK_HOST` (`example.com`) | Host used for the DNS and HTTP(S) diagnostic checks. Use a host that is reachable and serves HTTP(S). |
-| `CHECK_DNS` (`1.1.1.1`) | DNS server used for the external DNS diagnostic checks. Set this to a DNS server reachable on your network. |
+| `CHECK_HOST` (`host.containers.internal`) | Host name used by startup DNS diagnostics. |
 | `GVPROXY_PATH` (`wsl-gvproxy.exe` from `PATH`) | Path to the `wsl-gvproxy.exe` executable. |
 | `VMEXEC_PATH` (`wsl-vm` from `PATH`) | Path to the `wsl-vm` executable. |
 | `WSL2_GATEWAY_IP` (detected from the default route or resolver configuration) | WSL 2 gateway IP address. |
@@ -163,7 +162,6 @@ wsl.exe -d wsl-vpnkit --cd /app DEBUG=1 wsl-vpnkit
   * For corporate DNS servers or suffixes, see [WSL network settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#network-settings).
   * For HTTP(S) proxies, see WSL's [`autoProxy` setting](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting#considerations-when-using-autoproxy-for-httpproxy-mirroring-in-wsl). You may need to configure the proxies manually.
   * For HTTPS certificate failures, [install your organization's root CA in your distro](https://documentation.ubuntu.com/server/how-to/security/install-a-root-ca-certificate-in-the-trust-store/).
-* On start, `wsl-vpnkit` will do simple checks using `example.com` and `1.1.1.1` by default. While these checks do not block any functionality, you can set `CHECK_HOST` and `CHECK_DNS` to use values that are more relevant to you.
 * Ports on the WSL 2 VM are [accessible from the Windows host using `localhost`](https://learn.microsoft.com/en-us/windows/wsl/networking#accessing-linux-networking-apps-from-windows-localhost).
 * Ports on the Windows host are accessible from WSL 2 using `host.containers.internal`, `192.168.127.254` or [the IP address of the host machine](https://docs.microsoft.com/en-us/windows/wsl/networking#accessing-windows-networking-apps-from-linux-host-ip).
 * [ICMP is not forwarded outside the network](https://github.com/containers/gvisor-tap-vsock/#limitations)
