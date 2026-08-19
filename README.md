@@ -50,7 +50,7 @@ The `wsl-vpnkit` script can be installed and run in your existing distro. The fo
 sudo apt-get install iproute2 iptables iputils-ping dnsutils curl jq yq
 
 # download wsl-vpnkit and unpack
-curl -L https://github.com/sakai135/wsl-vpnkit/releases/latest/download/wsl-vpnkit-amd64.wsl -o wsl-vpnkit.wsl
+curl -fL https://github.com/sakai135/wsl-vpnkit/releases/latest/download/wsl-vpnkit-amd64.wsl -o wsl-vpnkit.wsl
 tar --strip-components=1 -xf wsl-vpnkit.wsl app/wsl-vpnkit app/wsl-vpnkit.yaml app/wsl-gvproxy.exe app/wsl-vm app/wsl-vpnkit.service
 rm wsl-vpnkit.wsl
 sudo mv wsl-vpnkit wsl-gvproxy.exe wsl-vm /usr/local/bin/
