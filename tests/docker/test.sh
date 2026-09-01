@@ -143,14 +143,14 @@ original_gateway=$(printf '%s\n' "$original_route" | awk 'NR == 1 { print $3 }')
 original_nat=$(iptables -t nat -S)
 [ -n "$original_route" ] || fail "container has no default route"
 
-common_env="WSL_INTEROP=1 WSL2_GATEWAY_IP=$original_gateway WSL2_TAP_NAME=eth0"
+common_env="WSL2_GATEWAY_IP=$original_gateway WSL2_TAP_NAME=eth0"
 common_env="$common_env WSL2_RESOLVCONF=/etc/resolv.conf"
 mock_env="$common_env VMEXEC_PATH=/tests/mock-vm MOCK_LOG_DIR=$log_dir"
 
 echo "case: default startup and SIGTERM cleanup"
 rm -f "$log_dir/vm.log"
 # shellcheck disable=SC2086
-start_background "$log_dir/default.log" env WSL_INTEROP=1 wsl-vpnkit
+start_background "$log_dir/default.log" env wsl-vpnkit
 wait_for "wsltap was not created" interface_exists wsltap
 wait_for "wsl-vm did not start" process_exists wsl-vm
 wait_for "wsl-gvproxy.exe did not start" process_exists wsl-gvproxy.exe
@@ -423,25 +423,18 @@ grep -q -- "is not executable due to WSL interop" "$log_dir/non-executable-gvpro
 assert_clean
 
 echo "case: invalid environment fails before setup"
-if env $mock_env WSL_INTEROP=1 PREEXISTING=2 wsl-vpnkit \
+if env $mock_env PREEXISTING=2 wsl-vpnkit \
     >"$log_dir/invalid-preexisting.log" 2>&1; then
     fail "invalid PREEXISTING was accepted"
 fi
 grep -q -- "PREEXISTING must be 0 or 1" "$log_dir/invalid-preexisting.log" ||
     fail "invalid PREEXISTING error was not shown"
 assert_clean
-if env $mock_env WSL_INTEROP= wsl-vpnkit >"$log_dir/missing-interop.log" 2>&1; then
-    fail "missing WSL_INTEROP was accepted"
-fi
-grep -q -- "WSL interop not available" "$log_dir/missing-interop.log" ||
-    fail "missing WSL_INTEROP error was not shown"
-assert_clean
-
-echo "case: failing gvproxy is rejected after execution attempt"
+echo "case: gvproxy execution failure is reported"
 failing_gvproxy="$log_dir/failing-gvproxy"
 printf '%s\n' '#!/bin/sh' 'exit 1' >"$failing_gvproxy"
 chmod 755 "$failing_gvproxy"
-if env $common_env VMEXEC_PATH=/usr/local/bin/wsl-vm \
+if env $mock_env \
     GVPROXY_PATH="$failing_gvproxy" wsl-vpnkit >"$log_dir/failing-gvproxy.log" 2>&1; then
     fail "failing gvproxy was accepted"
 fi
@@ -452,7 +445,7 @@ assert_clean
 echo "case: default route auto-detection"
 # shellcheck disable=SC2086
 start_background "$log_dir/autodetect.log" env $mock_env \
-    WSL_INTEROP=1 WSL2_GATEWAY_IP= WSL2_TAP_NAME= WSL2_RESOLVCONF= \
+    WSL2_GATEWAY_IP= WSL2_TAP_NAME= WSL2_RESOLVCONF= \
     wsl-vpnkit
 wait_for "wsltap was not created" interface_exists wsltap
 grep -q -- "WSL2_TAP_NAME=eth0" "$log_dir/autodetect.log" ||
@@ -479,7 +472,7 @@ EOF
 chmod 755 "$autodetect_path/ip"
 # shellcheck disable=SC2086
 start_background "$log_dir/autodetect-resolv.log" env $mock_env \
-    PATH="$autodetect_path:$PATH" WSL_INTEROP=1 WSL2_GATEWAY_IP= \
+    PATH="$autodetect_path:$PATH" WSL2_GATEWAY_IP= \
     WSL2_TAP_NAME= WSL2_RESOLVCONF="$resolvconf_autodetect" \
     wsl-vpnkit
 wait_for "wsltap was not created" interface_exists wsltap
@@ -495,7 +488,7 @@ cp /usr/local/bin/wsl-vm "$space_dir/temp vm"
 cp /usr/local/bin/wsl-gvproxy.exe "$space_dir/temp gvproxy"
 # shellcheck disable=SC2086
 start_background "$log_dir/space-paths.log" env \
-    WSL_INTEROP=1 WSL2_GATEWAY_IP=$original_gateway WSL2_TAP_NAME=eth0 \
+    WSL2_GATEWAY_IP=$original_gateway WSL2_TAP_NAME=eth0 \
     WSL2_RESOLVCONF=/etc/resolv.conf \
     VMEXEC_PATH="$space_dir/temp vm" \
     GVPROXY_PATH="$space_dir/temp gvproxy" \
