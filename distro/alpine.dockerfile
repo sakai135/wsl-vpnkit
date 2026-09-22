@@ -6,7 +6,7 @@ RUN git clone --depth 1 --branch v0.8.9 https://github.com/containers/gvisor-tap
     mv ./gvproxy-windows-arm64.exe ./bin/gvproxy-windows.exe && \
     chmod +x ./bin/gvproxy-windows.exe ./bin/gvforwarder
 
-FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.1 AS gvisor-tap-vsock
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.2 AS gvisor-tap-vsock
 WORKDIR /app/bin/amd64
 RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvproxy-windows.exe && \
     wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvforwarder && \
@@ -18,7 +18,7 @@ WORKDIR /app
 COPY ./distro/checksums ./
 RUN sha256sum -c checksums
 
-FROM docker.io/library/alpine:3.24.1
+FROM docker.io/library/alpine:3.24.2
 ARG TARGETARCH
 RUN apk update && \
     apk upgrade && \
