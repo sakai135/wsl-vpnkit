@@ -1,15 +1,15 @@
 FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.27.1 AS gvisor-tap-vsock-arm64
 WORKDIR /app
-RUN git clone --depth 1 --branch v0.8.9 https://github.com/containers/gvisor-tap-vsock.git . && \
+RUN git clone --depth 1 --branch v0.9.0 https://github.com/containers/gvisor-tap-vsock.git . && \
     GOARCH=arm64 make vm && \
-    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvproxy-windows-arm64.exe && \
+    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.9.0/gvproxy-windows-arm64.exe && \
     mv ./gvproxy-windows-arm64.exe ./bin/gvproxy-windows.exe && \
     chmod +x ./bin/gvproxy-windows.exe ./bin/gvforwarder
 
 FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.2 AS gvisor-tap-vsock
 WORKDIR /app/bin/amd64
-RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvproxy-windows.exe && \
-    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.8.9/gvforwarder && \
+RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.9.0/gvproxy-windows.exe && \
+    wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.9.0/gvforwarder && \
     chmod +x ./gvproxy-windows.exe ./gvforwarder
 WORKDIR /app/bin/arm64
 COPY --from=gvisor-tap-vsock-arm64 /app/bin/gvproxy-windows.exe ./

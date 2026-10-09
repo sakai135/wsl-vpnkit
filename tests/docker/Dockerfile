@@ -1,6 +1,6 @@
 FROM docker.io/library/golang:1.26.5 AS gvisor-tap-vsock
 WORKDIR /app
-RUN git clone --depth 1 --branch v0.8.9 https://github.com/containers/gvisor-tap-vsock.git . && \
+RUN git clone --depth 1 --branch v0.9.0 https://github.com/containers/gvisor-tap-vsock.git . && \
     CGO_ENABLED=0 make gvproxy vm && \
     chmod +x ./bin/gvproxy ./bin/gvforwarder
 
