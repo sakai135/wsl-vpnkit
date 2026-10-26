@@ -6,7 +6,7 @@ RUN git clone --depth 1 --branch v0.9.0 https://github.com/containers/gvisor-tap
     mv ./gvproxy-windows-arm64.exe ./bin/gvproxy-windows.exe && \
     chmod +x ./bin/gvproxy-windows.exe ./bin/gvforwarder
 
-FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.2 AS gvisor-tap-vsock
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.3 AS gvisor-tap-vsock
 WORKDIR /app/bin/amd64
 RUN wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.9.0/gvproxy-windows.exe && \
     wget https://github.com/containers/gvisor-tap-vsock/releases/download/v0.9.0/gvforwarder && \
