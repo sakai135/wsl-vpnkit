@@ -18,7 +18,7 @@ WORKDIR /app
 COPY ./distro/checksums ./
 RUN sha256sum -c checksums
 
-FROM docker.io/library/fedora:44
+FROM docker.io/library/fedora:45
 ARG TARGETARCH
 RUN dnf update -y && \
     dnf upgrade -y && \
